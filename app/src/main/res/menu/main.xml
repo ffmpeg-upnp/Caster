@@ -1,0 +1,22 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+      xmlns:app="http://schemas.android.com/apk/res-auto"
+      xmlns:tools="http://schemas.android.com/tools"
+      tools:context=".Main" >
+  <item
+        android:id="@+id/media_route_menu_item"
+        android:title="Route"
+        app:actionProviderClass="android.support.v7.app.MediaRouteActionProvider"
+        app:showAsAction="always"/>
+  <item android:id="@+id/action_audio"
+        android:title="Audio"
+        android:orderInCategory="100"
+        app:showAsAction="never" />
+  <item android:id="@+id/action_video1"
+        android:title="Video 1"
+        android:orderInCategory="101"
+        app:showAsAction="never" />
+  <item android:id="@+id/action_video2"
+        android:title="Video 2"
+        android:orderInCategory="102"
+        app:showAsAction="never" />
+</menu>
