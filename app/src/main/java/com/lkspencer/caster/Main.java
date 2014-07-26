@@ -143,10 +143,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     } else if (id == R.id.action_video2) {
       url = "http://10.0.0.2/MyWeb/video/ComeFollowMe/2014/07%20-%20July/Aaronic%20Priesthood/01%20-%20How%20can%20I%20help%20others%20have%20a%20meaningful%20experience%20with%20the%20sacrament%20(Duty%20to%20God)/2014-06-001-always-remember-him-720p-eng.mp4";
     } else if (id == R.id.action_audio) {
-      String test = "asdf";
-      String asdf = "test";
-      String qwer = test + " " + asdf;
-      url = "http://www.ghostwhisperer.us/Music/Queen/We%20Will%20Rock%20You.mp3" + qwer;
+      url = "http://www.ghostwhisperer.us/Music/Queen/We%20Will%20Rock%20You.mp3";
     }
     if (url != null) {
       RemoteMediaPlayer rmp = new RemoteMediaPlayer();
