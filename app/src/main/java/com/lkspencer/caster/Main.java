@@ -31,6 +31,9 @@ import com.google.android.gms.common.api.Result;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 
+import java.sql.ResultSet;
+import java.util.GregorianCalendar;
+
 
 public class Main extends ActionBarActivity implements NavigationDrawerFragment.NavigationDrawerCallbacks {
 
@@ -86,16 +89,17 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
         applicationStarted = true;
       }
     }
-
   };
-  private static final String NAMESPACE = "urn:x-cast:com.lkspencer.caster";
-  private static final int REQUEST_GMS_ERROR = 0;
 
 
 
   @Override protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
+
+    GregorianCalendar now = new GregorianCalendar();
+    VideoRepository vr = new VideoRepository(this, now.get(GregorianCalendar.YEAR), now.get(GregorianCalendar.MONTH));
+    vr.execute();
 
     mNavigationDrawerFragment = (NavigationDrawerFragment)getSupportFragmentManager().findFragmentById(R.id.navigation_drawer);
     mTitle = getTitle();
@@ -138,19 +142,27 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     // as you specify a parent activity in AndroidManifest.xml.
     int id = item.getItemId();
     String url = null;
+    String title = null;
+    String contentType = null;
     if (id == R.id.action_video1) {
-      url = "http://10.0.0.2/MyWeb/video/ComeFollowMe/2014/07%20-%20July/Young%20Women/02%20-%20Why%20are%20covenants%20important%20in%20my%20life/2013-03-004-using-pictures-360p-eng.mp4";
+      url = "http://192.168.1.2:32400/video/:/transcode/universal/start?path=http%3A%2F%2F127.0.0.1%3A32400%2Flibrary%2Fmetadata%2F706&mediaIndex=0&partIndex=0&protocol=http&offset=0&fastSeek=1&directPlay=0&directStream=1&videoQuality=60&videoResolution=1920x1080&maxVideoBitrate=8000&subtitleSize=100&audioBoost=100&session=dik4af9z5il1h5mi&X-Plex-Client-Identifier=9diqvrletp4x6r&X-Plex-Product=Plex+Web&X-Plex-Device=Windows&X-Plex-Platform=Chrome&X-Plex-Platform-Version=36.0&X-Plex-Version=2.1.12&X-Plex-Device-Name=Plex+Web+(Chrome)&X-Plex-Token=1bLEdyGBB6F4csSYpC5Q&X-Plex-Username=lkspencer";
+      title = "Using Pictures";
+      contentType = "video/mpeg";
     } else if (id == R.id.action_video2) {
-      url = "http://10.0.0.2/MyWeb/video/ComeFollowMe/2014/07%20-%20July/Aaronic%20Priesthood/01%20-%20How%20can%20I%20help%20others%20have%20a%20meaningful%20experience%20with%20the%20sacrament%20(Duty%20to%20God)/2014-06-001-always-remember-him-720p-eng.mp4";
+      url = "\\\\KIRK-PC\\My Videos\\2014-06-001-always-remember-him-1080p-eng.mp4";
+      title = "Always Remember Him";
+      contentType = "video/mpeg";
     } else if (id == R.id.action_audio) {
       url = "http://www.ghostwhisperer.us/Music/Queen/We%20Will%20Rock%20You.mp3";
+      title = "We Will Rock You";
+      contentType = "audio/mpeg";
     }
-    if (url != null) {
+    if (url != null && title != null && contentType != null) {
       RemoteMediaPlayer rmp = new RemoteMediaPlayer();
       MediaMetadata mMediaMetadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MOVIE);
-      mMediaMetadata.putString(MediaMetadata.KEY_TITLE, "Demo Video");
+      mMediaMetadata.putString(MediaMetadata.KEY_TITLE, title);
       MediaInfo data = new MediaInfo.Builder(url)
-              .setContentType("audio/mpeg")
+              .setContentType(contentType)
               .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
               .setMetadata(mMediaMetadata)
               .build();
@@ -195,24 +207,6 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_STANDARD);
     actionBar.setDisplayShowTitleEnabled(true);
     actionBar.setTitle(mTitle);
-  }
-
-  private void sendMessage(String message) {
-    RemoteMediaPlayer rmp = new RemoteMediaPlayer();
-
-    if (apiClient != null) {
-      try {
-        Cast.CastApi.sendMessage(apiClient, NAMESPACE, message).setResultCallback(new ResultCallback<Status>() {
-          @Override public void onResult(Status result) {
-            if (!result.isSuccess()) {
-              Log.e(TAG, "Sending message failed");
-            }
-          }
-        });
-      } catch (Exception e) {
-        Log.e(TAG, "Exception while sending message", e);
-      }
-    }
   }
 
   private void setSelectedDevice(CastDevice device) {
@@ -264,17 +258,42 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     }
   }
 
+  public void displayVideos(ResultSet resultSet) {
+    int i = 0;
+    int j = 10;
+    i++;
+    int k = j + i;
+    k++;
+    i = k;
+    i++;
+  }
+
 
 
   /**
    * A placeholder fragment containing a simple view.
    */
   public static class PlaceholderFragment extends Fragment {
+
     /**
      * The fragment argument representing the section number for this
      * fragment.
      */
     private static final String ARG_SECTION_NUMBER = "section_number";
+
+
+
+    @Override public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+      return inflater.inflate(R.layout.fragment_main, container, false);
+    }
+
+    @Override public void onAttach(Activity activity) {
+      super.onAttach(activity);
+      ((Main) activity).onSectionAttached(
+              getArguments().getInt(ARG_SECTION_NUMBER));
+    }
+
+
 
     /**
      * Returns a new instance of this fragment for the given section
@@ -288,22 +307,8 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
       return fragment;
     }
 
-    public PlaceholderFragment() {
-    }
+    public PlaceholderFragment() { }
 
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-      View rootView = inflater.inflate(R.layout.fragment_main, container, false);
-      return rootView;
-    }
-
-    @Override
-    public void onAttach(Activity activity) {
-      super.onAttach(activity);
-      ((Main) activity).onSectionAttached(
-              getArguments().getInt(ARG_SECTION_NUMBER));
-    }
   }
 
 }
