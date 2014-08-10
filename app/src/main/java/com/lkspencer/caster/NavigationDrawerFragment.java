@@ -63,6 +63,7 @@ public class NavigationDrawerFragment extends Fragment implements IVideoReposito
   private int mCurrentSelectedPosition = 0;
   private boolean mFromSavedInstanceState;
   private boolean mUserLearnedDrawer;
+  private int mCurriculumId;
 
 
 
@@ -255,6 +256,8 @@ public class NavigationDrawerFragment extends Fragment implements IVideoReposito
 
   private void selectItem(int position) {
     mCurrentSelectedPosition = position;
+    Curriculum c = (Curriculum)mDrawerListView.getAdapter().getItem(position);
+    this.mCurriculumId = c.CurriculumId;
     if (mDrawerListView != null) {
       mDrawerListView.setItemChecked(position, true);
     }
@@ -289,6 +292,10 @@ public class NavigationDrawerFragment extends Fragment implements IVideoReposito
      * Called when an item in the navigation drawer is selected.
      */
     void onNavigationDrawerItemSelected(int position);
+  }
+
+  public int getCurrentCurriculumId() {
+    return this.mCurriculumId;
   }
 
 }

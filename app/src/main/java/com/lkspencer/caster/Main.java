@@ -33,10 +33,8 @@ import com.google.android.gms.common.api.Result;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.GregorianCalendar;
 
@@ -103,14 +101,6 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
-    /*
-    GregorianCalendar now = new GregorianCalendar();
-    VideoRepository vr = new VideoRepository(this, now.get(GregorianCalendar.YEAR), now.get(GregorianCalendar.MONTH));
-    Integer[] params = new Integer[3];
-    params[0] = VideoRepository.Actions.GET_CURRICULUMS;
-    vr.execute(params);
-    //*/
-
     mNavigationDrawerFragment = (NavigationDrawerFragment)getSupportFragmentManager().findFragmentById(R.id.navigation_drawer);
     mTitle = getTitle();
 
@@ -124,9 +114,10 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
   @Override public void onNavigationDrawerItemSelected(int position) {
     // update the main content by replacing fragments
     FragmentManager fragmentManager = getSupportFragmentManager();
-    fragmentManager.beginTransaction()
-            .replace(R.id.container, PlaceholderFragment.newInstance(position + 1))
-            .commit();
+    fragmentManager
+      .beginTransaction()
+      .replace(R.id.container, PlaceholderFragment.newInstance(position))
+      .commit();
   }
 
   @Override public boolean onCreateOptionsMenu(Menu menu) {
@@ -196,21 +187,36 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
 
 
 
-  public void onSectionAttached(int number) {
-    switch (number) {
-      case 1:
-        GregorianCalendar now = new GregorianCalendar();
-        VideoRepository vr = new VideoRepository(this, now.get(GregorianCalendar.YEAR), now.get(GregorianCalendar.MONTH));
-        Integer[] params = new Integer[3];
+  public void onSectionAttached(int position) {
+    //0 - List of classes
+    //1 - List of topics
+    //2 - List of videos
+    GregorianCalendar now = new GregorianCalendar();
+    VideoRepository vr = new VideoRepository(this, now.get(GregorianCalendar.YEAR), now.get(GregorianCalendar.MONTH));
+    Integer[] params;
+    switch (position) {
+      case 0:
+        params = new Integer[3];
         params[0] = VideoRepository.Actions.GET_CLASSES;
-        params[1] = number;
+        params[1] = mNavigationDrawerFragment.getCurrentCurriculumId();;
         vr.execute(params);
         mTitle = getString(R.string.title_section1);
         break;
-      case 2:
+      case 1:
+        params = new Integer[3];
+        params[0] = VideoRepository.Actions.GET_CLASSES;
+        params[1] = mNavigationDrawerFragment.getCurrentCurriculumId();;
+        //params[2] = classId;
+        vr.execute(params);
         mTitle = getString(R.string.title_section2);
         break;
-      case 3:
+      case 2:
+        params = new Integer[3];
+        params[0] = VideoRepository.Actions.GET_CLASSES;
+        params[1] = mNavigationDrawerFragment.getCurrentCurriculumId();;
+        //params[2] = classId;
+        //params[3] = topicId;
+        vr.execute(params);
         mTitle = getString(R.string.title_section3);
         break;
     }
@@ -313,13 +319,14 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
      * The fragment argument representing the section number for this
      * fragment.
      */
-    private static final String ARG_SECTION_NUMBER = "section_number";
+    private static final String ARG_POSITION_NUMBER = "position_number";
+    private static final String ARG_ID_NUMBER = "id_number";
 
 
 
     @Override public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
       if (savedInstanceState != null) {
-        switch (savedInstanceState.getInt(ARG_SECTION_NUMBER)) {
+        switch (savedInstanceState.getInt(ARG_ID_NUMBER)) {
           case 1:
             return inflater.inflate(R.layout.fragment_classes, container, false);
           case 2:
@@ -331,8 +338,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
 
     @Override public void onAttach(Activity activity) {
       super.onAttach(activity);
-      ((Main) activity).onSectionAttached(
-              getArguments().getInt(ARG_SECTION_NUMBER));
+      ((Main)activity).onSectionAttached(getArguments().getInt(ARG_POSITION_NUMBER));
     }
 
 
@@ -341,10 +347,10 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
      * Returns a new instance of this fragment for the given section
      * number.
      */
-    public static PlaceholderFragment newInstance(int sectionNumber) {
+    public static PlaceholderFragment newInstance(int positionNumber) {
       PlaceholderFragment fragment = new PlaceholderFragment();
       Bundle args = new Bundle();
-      args.putInt(ARG_SECTION_NUMBER, sectionNumber);
+      args.putInt(ARG_POSITION_NUMBER, positionNumber);
       fragment.setArguments(args);
       return fragment;
     }
