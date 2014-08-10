@@ -150,7 +150,7 @@ public class NavigationDrawerFragment extends Fragment implements IVideoReposito
 
 
 
-  public void ProcessResultSet(Connection connection, Statement statement, ResultSet resultSet) {
+  public void ProcessResultSet(VideoRepository repository, ResultSet resultSet) {
     try {
       if (resultSet == null || resultSet.isClosed() || !resultSet.first()) return;
       ArrayList<Curriculum> curriculums = new ArrayList<Curriculum>();
@@ -171,19 +171,7 @@ public class NavigationDrawerFragment extends Fragment implements IVideoReposito
     } catch (SQLException e) {
       e.printStackTrace();
     } finally {
-      try {
-        if (resultSet != null) {
-          resultSet.close();
-        }
-        if (statement != null) {
-          statement.close();
-        }
-        if (connection != null) {
-          connection.close();
-        }
-      } catch (SQLException e) {
-        e.printStackTrace();
-      }
+      repository.Close();
     }
   }
 

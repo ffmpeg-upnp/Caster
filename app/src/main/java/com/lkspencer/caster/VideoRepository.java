@@ -21,6 +21,8 @@ public class VideoRepository extends AsyncTask<Integer[], Void, Void> {
     this.month = month;
   }
 
+
+
   private IVideoRepositoryCallback videoRepositoryCallback;
   private int year;
   private int month;
@@ -33,6 +35,8 @@ public class VideoRepository extends AsyncTask<Integer[], Void, Void> {
     public static final int GET_TOPICS = 2;
     public static final int GET_VIDEO = 3;
   };
+
+
 
   public ResultSet GetCurriculums() {
     try {
@@ -156,6 +160,24 @@ public class VideoRepository extends AsyncTask<Integer[], Void, Void> {
     return null;
   }
 
+  public void Close() {
+    try {
+      if (this.connection != null) {
+        this.connection.close();
+      }
+      if (this.statement != null) {
+        this.statement.close();
+      }
+      if (this.resultSet != null) {
+        this.resultSet.close();
+      }
+    } catch (SQLException e) {
+      e.printStackTrace();
+    }
+  }
+
+
+
   @Override protected Void doInBackground(Integer[]... params) {
     int action = params[0][0];
 
@@ -167,15 +189,18 @@ public class VideoRepository extends AsyncTask<Integer[], Void, Void> {
         resultSet = GetClasses(params[0][1]);
         break;
       case Actions.GET_TOPICS:
+        resultSet = GetTopics(params[0][1], params[0][2]);
         break;
       case Actions.GET_VIDEO:
+        resultSet = GetVideos(params[0][1], params[0][2], params[0][3]);
         break;
     }
     return null;
   }
 
   @Override protected void onPostExecute(Void aVoid) {
-    videoRepositoryCallback.ProcessResultSet(connection, statement, resultSet);
+    videoRepositoryCallback.ProcessResultSet(this, resultSet);
     super.onPostExecute(aVoid);
   }
+
 }

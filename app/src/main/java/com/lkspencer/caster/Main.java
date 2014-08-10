@@ -17,6 +17,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -271,7 +272,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     }
   }
 
-  public void ProcessResultSet(Connection connection, Statement statement, ResultSet resultSet) {
+  public void ProcessResultSet(VideoRepository repository, ResultSet resultSet) {
     ListView classes = (ListView)findViewById(R.id.classes);
     try {
       if (resultSet == null || resultSet.isClosed() || !resultSet.first()) return;
@@ -289,22 +290,15 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
               android.R.id.text1,
               classDataModels);
       classes.setAdapter(ca);
+      classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+
+        }
+      });
     } catch (SQLException e) {
       e.printStackTrace();
     } finally {
-      try {
-        if (resultSet != null) {
-          resultSet.close();
-        }
-        if (statement != null) {
-          statement.close();
-        }
-        if (connection != null) {
-          connection.close();
-        }
-      } catch (SQLException e) {
-        e.printStackTrace();
-      }
+      repository.Close();
     }
   }
 
