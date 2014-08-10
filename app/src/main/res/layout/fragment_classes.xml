@@ -1,0 +1,8 @@
+<ListView xmlns:android="http://schemas.android.com/apk/res/android"
+          android:id="@+id/classes"
+          android:layout_width="match_parent"
+          android:layout_height="match_parent"
+          android:choiceMode="singleChoice"
+          android:divider="@drawable/abc_list_divider_holo_light"
+          android:dividerHeight="1dp"
+          android:background="#eee" />

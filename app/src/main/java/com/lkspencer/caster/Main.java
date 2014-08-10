@@ -17,6 +17,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ListView;
 import android.widget.Toast;
 
 import com.google.android.gms.cast.Cast;
@@ -31,11 +32,15 @@ import com.google.android.gms.common.api.Result;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 
+import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.GregorianCalendar;
 
 
-public class Main extends ActionBarActivity implements NavigationDrawerFragment.NavigationDrawerCallbacks {
+public class Main extends ActionBarActivity implements NavigationDrawerFragment.NavigationDrawerCallbacks, IVideoRepositoryCallback {
 
   private NavigationDrawerFragment mNavigationDrawerFragment;
   private CharSequence mTitle;
@@ -97,17 +102,19 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
+    /*
     GregorianCalendar now = new GregorianCalendar();
     VideoRepository vr = new VideoRepository(this, now.get(GregorianCalendar.YEAR), now.get(GregorianCalendar.MONTH));
-    vr.execute();
+    Integer[] params = new Integer[3];
+    params[0] = VideoRepository.Actions.GET_CURRICULUMS;
+    vr.execute(params);
+    //*/
 
     mNavigationDrawerFragment = (NavigationDrawerFragment)getSupportFragmentManager().findFragmentById(R.id.navigation_drawer);
     mTitle = getTitle();
 
     // Set up the drawer.
-    mNavigationDrawerFragment.setUp(
-      R.id.navigation_drawer,
-      (DrawerLayout) findViewById(R.id.drawer_layout));
+    mNavigationDrawerFragment.setUp(R.id.navigation_drawer, (DrawerLayout) findViewById(R.id.drawer_layout));
 
     mediaRouter = MediaRouter.getInstance(getApplicationContext());
     mediaRouteSelector = new MediaRouteSelector.Builder().addControlCategory(CastMediaControlIntent.categoryForCast(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID)).build();
@@ -191,6 +198,12 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
   public void onSectionAttached(int number) {
     switch (number) {
       case 1:
+        GregorianCalendar now = new GregorianCalendar();
+        VideoRepository vr = new VideoRepository(this, now.get(GregorianCalendar.YEAR), now.get(GregorianCalendar.MONTH));
+        Integer[] params = new Integer[3];
+        params[0] = VideoRepository.Actions.GET_CLASSES;
+        params[1] = number;
+        vr.execute(params);
         mTitle = getString(R.string.title_section1);
         break;
       case 2:
@@ -258,14 +271,41 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     }
   }
 
-  public void displayVideos(ResultSet resultSet) {
-    int i = 0;
-    int j = 10;
-    i++;
-    int k = j + i;
-    k++;
-    i = k;
-    i++;
+  public void ProcessResultSet(Connection connection, Statement statement, ResultSet resultSet) {
+    ListView classes = (ListView)findViewById(R.id.classes);
+    try {
+      if (resultSet == null || resultSet.isClosed() || !resultSet.first()) return;
+      ArrayList<ClassDataModel> classDataModels = new ArrayList<ClassDataModel>();
+
+      do {
+        ClassDataModel classDataModel = new ClassDataModel();
+        classDataModel.ClassId = resultSet.getInt(1);
+        classDataModel.Name = resultSet.getString(2);
+        classDataModels.add(classDataModel);
+      } while (resultSet.next());
+      ClassAdapter ca = new ClassAdapter(
+              this,
+              android.R.layout.simple_list_item_1,
+              android.R.id.text1,
+              classDataModels);
+      classes.setAdapter(ca);
+    } catch (SQLException e) {
+      e.printStackTrace();
+    } finally {
+      try {
+        if (resultSet != null) {
+          resultSet.close();
+        }
+        if (statement != null) {
+          statement.close();
+        }
+        if (connection != null) {
+          connection.close();
+        }
+      } catch (SQLException e) {
+        e.printStackTrace();
+      }
+    }
   }
 
 
@@ -284,7 +324,15 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
 
 
     @Override public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-      return inflater.inflate(R.layout.fragment_main, container, false);
+      if (savedInstanceState != null) {
+        switch (savedInstanceState.getInt(ARG_SECTION_NUMBER)) {
+          case 1:
+            return inflater.inflate(R.layout.fragment_classes, container, false);
+          case 2:
+            return inflater.inflate(R.layout.fragment_classes, container, false);
+        }
+      }
+      return inflater.inflate(R.layout.fragment_classes, container, false);
     }
 
     @Override public void onAttach(Activity activity) {
