@@ -26,6 +26,56 @@ public class VideoRepository extends AsyncTask<Integer[], Void, Void> {
   private int year;
   private int month;
 
+  public ResultSet GetCurriculums() {
+    try {
+      Class.forName("com.mysql.jdbc.Driver");
+      try {
+        Connection connect = DriverManager.getConnection("jdbc:mysql://us-cdbr-azure-west-a.cloudapp.net:3306/stvstakATbOqDhAx?user=b31446d5980666&password=786a82b3");
+        Statement statement = connect.createStatement();
+        ResultSet resultSet = statement.executeQuery(
+                "select\n" +
+                "  c.*\n" +
+                "from\n" +
+                "  Curriculums c");
+        statement.close();
+        connect.close();
+        return resultSet;
+      } catch (SQLException e) {
+        e.printStackTrace();
+      }
+    } catch (ClassNotFoundException e) {
+      e.printStackTrace();
+    }
+    return null;
+  }
+
+  public ResultSet GetClasses(int curriculumId) {
+    try {
+      Class.forName("com.mysql.jdbc.Driver");
+      try {
+        Connection connect = DriverManager.getConnection("jdbc:mysql://us-cdbr-azure-west-a.cloudapp.net:3306/stvstakATbOqDhAx?user=b31446d5980666&password=786a82b3");
+        PreparedStatement statement = connect.prepareStatement(
+                "select\n" +
+                "  c.*\n" +
+                "from\n" +
+                "  Classes c\n" +
+                "where\n" +
+                "  c.CurriculumId = ?\n"
+        );
+        statement.setInt(1, curriculumId);
+        ResultSet resultSet = statement.executeQuery();
+        statement.close();
+        connect.close();
+        return resultSet;
+      } catch (SQLException e) {
+        e.printStackTrace();
+      }
+    } catch (ClassNotFoundException e) {
+      e.printStackTrace();
+    }
+    return null;
+  }
+
   public ResultSet GetVideos() {
     try {
       Class.forName("com.mysql.jdbc.Driver");
