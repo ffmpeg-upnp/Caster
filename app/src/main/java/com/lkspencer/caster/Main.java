@@ -29,7 +29,6 @@ import com.google.android.gms.cast.MediaMetadata;
 import com.google.android.gms.cast.RemoteMediaPlayer;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.Result;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 import com.lkspencer.caster.adapters.ClassAdapter;
@@ -37,6 +36,7 @@ import com.lkspencer.caster.adapters.TopicAdapter;
 import com.lkspencer.caster.adapters.VideoAdapter;
 import com.lkspencer.caster.datamodels.ClassDataModel;
 import com.lkspencer.caster.datamodels.TopicDataModel;
+import com.lkspencer.caster.datamodels.VideoDataModel;
 
 import java.util.GregorianCalendar;
 
@@ -88,8 +88,8 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
       setSelectedDevice(null);
     }
   };
-  private final ResultCallback connectionResultCallback = new ResultCallback() {
-    @Override public void onResult(Result result) {
+  private final ResultCallback<Cast.ApplicationConnectionResult> connectionResultCallback = new ResultCallback<Cast.ApplicationConnectionResult>() {
+    @Override public void onResult(Cast.ApplicationConnectionResult result) {
       Toast.makeText(Main.this, "result: " + result.getStatus().getStatusMessage(), Toast.LENGTH_SHORT).show();
 
       Status status = result.getStatus();
@@ -145,38 +145,6 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     // Handle action bar item clicks here. The action bar will
     // automatically handle clicks on the Home/Up button, so long
     // as you specify a parent activity in AndroidManifest.xml.
-    int id = item.getItemId();
-    String url = null;
-    String title = null;
-    String contentType = null;
-    if (id == R.id.action_video1) {
-      url = "http://192.168.1.2:32400/video/:/transcode/universal/start?path=http%3A%2F%2F127.0.0.1%3A32400%2Flibrary%2Fmetadata%2F706&mediaIndex=0&partIndex=0&protocol=http&offset=0&fastSeek=1&directPlay=0&directStream=1&videoQuality=60&videoResolution=1920x1080&maxVideoBitrate=8000&subtitleSize=100&audioBoost=100&session=dik4af9z5il1h5mi&X-Plex-Client-Identifier=9diqvrletp4x6r&X-Plex-Product=Plex+Web&X-Plex-Device=Windows&X-Plex-Platform=Chrome&X-Plex-Platform-Version=36.0&X-Plex-Version=2.1.12&X-Plex-Device-Name=Plex+Web+(Chrome)&X-Plex-Token=1bLEdyGBB6F4csSYpC5Q&X-Plex-Username=lkspencer";
-      title = "Using Pictures";
-      contentType = "video/mpeg";
-    } else if (id == R.id.action_video2) {
-      url = "\\\\KIRK-PC\\My Videos\\2014-06-001-always-remember-him-1080p-eng.mp4";
-      title = "Always Remember Him";
-      contentType = "video/mpeg";
-    } else if (id == R.id.action_audio) {
-      url = "http://www.ghostwhisperer.us/Music/Queen/We%20Will%20Rock%20You.mp3";
-      title = "We Will Rock You";
-      contentType = "audio/mpeg";
-    }
-    if (url != null && title != null && contentType != null) {
-      RemoteMediaPlayer rmp = new RemoteMediaPlayer();
-      MediaMetadata mMediaMetadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MOVIE);
-      mMediaMetadata.putString(MediaMetadata.KEY_TITLE, title);
-      MediaInfo data = new MediaInfo.Builder(url)
-              .setContentType(contentType)
-              .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
-              .setMetadata(mMediaMetadata)
-              .build();
-
-      if (apiClient != null) {
-        rmp.load(apiClient, data, true);
-      }
-      return true;
-    }
     return super.onOptionsItemSelected(item);
   }
 
@@ -337,6 +305,23 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     classes.setAdapter(va);
     classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
       @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+        VideoDataModel v = (VideoDataModel) parent.getAdapter().getItem(position);
+        String url = v.Link;
+        String title = v.Name;
+        String contentType = "video/mpeg";
+        RemoteMediaPlayer rmp = new RemoteMediaPlayer();
+        MediaMetadata mMediaMetadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MOVIE);
+        mMediaMetadata.putString(MediaMetadata.KEY_TITLE, title);
+        MediaInfo data = new MediaInfo.Builder(url)
+                .setContentType(contentType)
+                .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
+                .setMetadata(mMediaMetadata)
+                .build();
+
+        if (apiClient != null) {
+          rmp.load(apiClient, data, true);
+        }
+        //v.Link
         //TODO: Play video
       }
     });
