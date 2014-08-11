@@ -23,9 +23,6 @@ import android.widget.ListView;
 import com.lkspencer.caster.adapters.CurriculumAdapter;
 import com.lkspencer.caster.datamodels.CurriculumDataModel;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.GregorianCalendar;
 
 /**
@@ -151,29 +148,14 @@ public class NavigationDrawerFragment extends Fragment implements IVideoReposito
 
 
 
-  public void ProcessResultSet(VideoRepository repository, ResultSet resultSet) {
-    try {
-      if (resultSet == null || resultSet.isClosed() || !resultSet.first()) return;
-      ArrayList<CurriculumDataModel> curriculums = new ArrayList<CurriculumDataModel>();
-
-      do {
-        CurriculumDataModel curriculum = new CurriculumDataModel();
-        curriculum.CurriculumId = resultSet.getInt(1);
-        curriculum.Name = resultSet.getString(2);
-        curriculums.add(curriculum);
-      } while (resultSet.next());
-      CurriculumAdapter ca = new CurriculumAdapter(
-              getActionBar().getThemedContext(),
-              android.R.layout.simple_list_item_1,
-              android.R.id.text1,
-              curriculums);
-      mDrawerListView.setAdapter(ca);
-      mDrawerListView.setItemChecked(mCurrentSelectedPosition, true);
-    } catch (SQLException e) {
-      e.printStackTrace();
-    } finally {
-      repository.Close();
-    }
+  public void ProcessResultSet(VideoRepository repository) {
+    CurriculumAdapter ca = new CurriculumAdapter(
+            getActionBar().getThemedContext(),
+            android.R.layout.simple_list_item_1,
+            android.R.id.text1,
+            repository.curriculums);
+    mDrawerListView.setAdapter(ca);
+    mDrawerListView.setItemChecked(mCurrentSelectedPosition, true);
   }
 
   public boolean isDrawerOpen() {
