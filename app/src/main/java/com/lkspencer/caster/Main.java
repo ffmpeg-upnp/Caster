@@ -223,6 +223,8 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
         mTitle = "Videos";
         break;
     }
+    ActionBar actionBar = getSupportActionBar();
+    actionBar.setTitle(mTitle);
   }
 
   public void restoreActionBar() {
@@ -281,70 +283,63 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     }
   }
 
-  public void ProcessResultSet(VideoRepository repository) {
+  public void ProcessCurriculums(VideoRepository repository) { }
+
+  public void ProcessClasses(VideoRepository repository) {
     ListView classes = (ListView) findViewById(R.id.classes);
-    /*
-    if (resultSet == null) {
-      ArrayList<String> values = new ArrayList<String>();
-      values.add("Empty Result Set");
-      classes.setAdapter(new ArrayAdapter<String>(
-        this,
-        android.R.layout.simple_list_item_1,
-        android.R.id.text1,
-        values
-      ));
-      return;
-    }
-    */
-    if (classId == 0 && topicId == 0) {
-      ClassAdapter ca = new ClassAdapter(
-              this,
-              android.R.layout.simple_list_item_1,
-              android.R.id.text1,
-              repository.classDataModels);
-      classes.setAdapter(ca);
-      classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-        @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-          ClassDataModel c = (ClassDataModel) parent.getAdapter().getItem(position);
-          Main.this.classId = c.ClassId;
-          FragmentManager fragmentManager = getSupportFragmentManager();
-          fragmentManager
-                  .beginTransaction()
-                  .replace(R.id.container, PlaceholderFragment.newInstance(1))
-                  .commit();
-        }
-      });
-    } else if (classId > 0 && topicId == 0) {
-      TopicAdapter ta = new TopicAdapter(
-              this,
-              android.R.layout.simple_list_item_1,
-              android.R.id.text1,
-              repository.topicDataModels);
-      classes.setAdapter(ta);
-      classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-        @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-          TopicDataModel t = (TopicDataModel) parent.getAdapter().getItem(position);
-          Main.this.topicId = t.TopicId;
-          FragmentManager fragmentManager = getSupportFragmentManager();
-          fragmentManager
-                  .beginTransaction()
-                  .replace(R.id.container, PlaceholderFragment.newInstance(2))
-                  .commit();
-        }
-      });
-    } else {
-      VideoAdapter va = new VideoAdapter(
-              this,
-              android.R.layout.simple_list_item_1,
-              android.R.id.text1,
-              repository.videoDataModels);
-      classes.setAdapter(va);
-      classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-        @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-          //TODO: Play video
-        }
-      });
-    }
+    ClassAdapter ca = new ClassAdapter(
+      this,
+      android.R.layout.simple_list_item_1,
+      android.R.id.text1,
+      repository.classDataModels);
+    classes.setAdapter(ca);
+    classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+      @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+        ClassDataModel c = (ClassDataModel) parent.getAdapter().getItem(position);
+        Main.this.classId = c.ClassId;
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        fragmentManager
+          .beginTransaction()
+          .replace(R.id.container, PlaceholderFragment.newInstance(1))
+          .commit();
+      }
+    });
+  }
+
+  public void ProcessTopics(VideoRepository repository) {
+    ListView classes = (ListView) findViewById(R.id.classes);
+    TopicAdapter ta = new TopicAdapter(
+            this,
+            android.R.layout.simple_list_item_1,
+            android.R.id.text1,
+            repository.topicDataModels);
+    classes.setAdapter(ta);
+    classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+      @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+        TopicDataModel t = (TopicDataModel) parent.getAdapter().getItem(position);
+        Main.this.topicId = t.TopicId;
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        fragmentManager
+                .beginTransaction()
+                .replace(R.id.container, PlaceholderFragment.newInstance(2))
+                .commit();
+      }
+    });
+  }
+
+  public void ProcessVideos(VideoRepository repository) {
+    ListView classes = (ListView) findViewById(R.id.classes);
+    VideoAdapter va = new VideoAdapter(
+            this,
+            android.R.layout.simple_list_item_1,
+            android.R.id.text1,
+            repository.videoDataModels);
+    classes.setAdapter(va);
+    classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+      @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+        //TODO: Play video
+      }
+    });
   }
 
 

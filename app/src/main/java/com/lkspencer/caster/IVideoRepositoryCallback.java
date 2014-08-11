@@ -9,5 +9,8 @@ import java.sql.Statement;
  * This is used so that it can be handed off to the VideoRepository class
  */
 public interface IVideoRepositoryCallback {
-  void ProcessResultSet(VideoRepository repository);
+  void ProcessCurriculums(VideoRepository repository);
+  void ProcessClasses(VideoRepository repository);
+  void ProcessTopics(VideoRepository repository);
+  void ProcessVideos(VideoRepository repository);
 }

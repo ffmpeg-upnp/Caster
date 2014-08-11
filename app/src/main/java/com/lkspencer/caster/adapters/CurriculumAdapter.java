@@ -48,7 +48,9 @@ public class CurriculumAdapter extends ArrayAdapter<CurriculumDataModel> {
         view = contentView;
       }
       if (view != null) {
-        ((TextView)view).setText(arrayListCurriculum.get(position).Name);
+        TextView curriculum = ((TextView)view);
+        curriculum.setText(arrayListCurriculum.get(position).Name);
+        curriculum.setPadding(64, 0, 64, 0);
       }
 
       return view;

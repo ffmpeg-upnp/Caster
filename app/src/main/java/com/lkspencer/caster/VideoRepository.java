@@ -31,7 +31,8 @@ public class VideoRepository extends AsyncTask<Integer[], Void, Void> {
   private IVideoRepositoryCallback videoRepositoryCallback;
   private int year;
   private int month;
-  public ArrayList<CurriculumDataModel> curriculums;
+  private int action;
+  public ArrayList<CurriculumDataModel> curriculumsDataModels;
   public ArrayList<ClassDataModel> classDataModels;
   public ArrayList<TopicDataModel> topicDataModels;
   public ArrayList<VideoDataModel> videoDataModels;
@@ -49,7 +50,7 @@ public class VideoRepository extends AsyncTask<Integer[], Void, Void> {
     PreparedStatement statement = null;
     ResultSet rs = null;
     try {
-      curriculums = new ArrayList<CurriculumDataModel>();
+      curriculumsDataModels = new ArrayList<CurriculumDataModel>();
       Class.forName("com.mysql.jdbc.Driver");
       connection = DriverManager.getConnection("jdbc:mysql://us-cdbr-azure-west-a.cloudapp.net:3306/stvstakATbOqDhAx?user=b31446d5980666&password=786a82b3");
       statement = connection.prepareStatement(
@@ -63,7 +64,7 @@ public class VideoRepository extends AsyncTask<Integer[], Void, Void> {
         CurriculumDataModel curriculum = new CurriculumDataModel();
         curriculum.CurriculumId = rs.getInt(1);
         curriculum.Name = rs.getString(2);
-        curriculums.add(curriculum);
+        curriculumsDataModels.add(curriculum);
       } while (rs.next());
     } catch (ClassNotFoundException e) {
       e.printStackTrace();
@@ -236,7 +237,11 @@ public class VideoRepository extends AsyncTask<Integer[], Void, Void> {
 
 
   @Override protected Void doInBackground(Integer[]... params) {
-    int action = params[0][0];
+    action = params[0][0];
+    curriculumsDataModels = null;
+    classDataModels = null;
+    topicDataModels = null;
+    videoDataModels = null;
 
     switch (action) {
       case Actions.GET_CURRICULUMS:
@@ -256,7 +261,20 @@ public class VideoRepository extends AsyncTask<Integer[], Void, Void> {
   }
 
   @Override protected void onPostExecute(Void aVoid) {
-    videoRepositoryCallback.ProcessResultSet(this);
+    switch (action) {
+      case Actions.GET_CURRICULUMS:
+        videoRepositoryCallback.ProcessCurriculums(this);
+        break;
+      case Actions.GET_CLASSES:
+        videoRepositoryCallback.ProcessClasses(this);
+        break;
+      case Actions.GET_TOPICS:
+        videoRepositoryCallback.ProcessTopics(this);
+        break;
+      case Actions.GET_VIDEOS:
+        videoRepositoryCallback.ProcessVideos(this);
+        break;
+    }
     super.onPostExecute(aVoid);
   }
 

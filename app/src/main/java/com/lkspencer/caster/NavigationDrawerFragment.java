@@ -148,15 +148,18 @@ public class NavigationDrawerFragment extends Fragment implements IVideoReposito
 
 
 
-  public void ProcessResultSet(VideoRepository repository) {
+  public void ProcessCurriculums(VideoRepository repository) {
     CurriculumAdapter ca = new CurriculumAdapter(
             getActionBar().getThemedContext(),
             android.R.layout.simple_list_item_1,
             android.R.id.text1,
-            repository.curriculums);
+            repository.curriculumsDataModels);
     mDrawerListView.setAdapter(ca);
     mDrawerListView.setItemChecked(mCurrentSelectedPosition, true);
   }
+  public void ProcessClasses(VideoRepository repository) { }
+  public void ProcessTopics(VideoRepository repository) { }
+  public void ProcessVideos(VideoRepository repository) { }
 
   public boolean isDrawerOpen() {
     return mDrawerLayout != null && mDrawerLayout.isDrawerOpen(mFragmentContainerView);
