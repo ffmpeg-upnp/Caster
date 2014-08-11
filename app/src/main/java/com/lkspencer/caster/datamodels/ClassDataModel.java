@@ -1,4 +1,4 @@
-package com.lkspencer.caster;
+package com.lkspencer.caster.datamodels;
 
 /**
  * Created by Kirk on 8/10/2014.

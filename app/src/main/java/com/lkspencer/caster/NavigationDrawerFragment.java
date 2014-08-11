@@ -18,13 +18,13 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
-import java.sql.Connection;
+import com.lkspencer.caster.adapters.CurriculumAdapter;
+import com.lkspencer.caster.datamodels.CurriculumDataModel;
+
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.GregorianCalendar;
 
@@ -154,10 +154,10 @@ public class NavigationDrawerFragment extends Fragment implements IVideoReposito
   public void ProcessResultSet(VideoRepository repository, ResultSet resultSet) {
     try {
       if (resultSet == null || resultSet.isClosed() || !resultSet.first()) return;
-      ArrayList<Curriculum> curriculums = new ArrayList<Curriculum>();
+      ArrayList<CurriculumDataModel> curriculums = new ArrayList<CurriculumDataModel>();
 
       do {
-        Curriculum curriculum = new Curriculum();
+        CurriculumDataModel curriculum = new CurriculumDataModel();
         curriculum.CurriculumId = resultSet.getInt(1);
         curriculum.Name = resultSet.getString(2);
         curriculums.add(curriculum);
@@ -256,8 +256,10 @@ public class NavigationDrawerFragment extends Fragment implements IVideoReposito
 
   private void selectItem(int position) {
     mCurrentSelectedPosition = position;
-    Curriculum c = (Curriculum)mDrawerListView.getAdapter().getItem(position);
-    this.mCurriculumId = c.CurriculumId;
+    if (mDrawerListView != null && mDrawerListView.getAdapter() != null) {
+      CurriculumDataModel c = (CurriculumDataModel) mDrawerListView.getAdapter().getItem(position);
+      this.mCurriculumId = c.CurriculumId;
+    }
     if (mDrawerListView != null) {
       mDrawerListView.setItemChecked(position, true);
     }

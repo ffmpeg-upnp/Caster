@@ -33,7 +33,7 @@ public class VideoRepository extends AsyncTask<Integer[], Void, Void> {
     public static final int GET_CURRICULUMS = 0;
     public static final int GET_CLASSES = 1;
     public static final int GET_TOPICS = 2;
-    public static final int GET_VIDEO = 3;
+    public static final int GET_VIDEOS = 3;
   };
 
 
@@ -106,10 +106,7 @@ public class VideoRepository extends AsyncTask<Integer[], Void, Void> {
           statement.setInt(3, classId);
         }
         if (statement == null) return null;
-        ResultSet resultSet = statement.executeQuery();
-        statement.close();
-        connect.close();
-        return resultSet;
+        return statement.executeQuery();
       } catch (SQLException e) {
         e.printStackTrace();
       }
@@ -147,10 +144,7 @@ public class VideoRepository extends AsyncTask<Integer[], Void, Void> {
         }
         if (statement == null) return null;
 
-        ResultSet resultSet = statement.executeQuery();
-        statement.close();
-        connect.close();
-        return resultSet;
+        return statement.executeQuery();
       } catch (SQLException e) {
         e.printStackTrace();
       }
@@ -191,7 +185,7 @@ public class VideoRepository extends AsyncTask<Integer[], Void, Void> {
       case Actions.GET_TOPICS:
         resultSet = GetTopics(params[0][1], params[0][2]);
         break;
-      case Actions.GET_VIDEO:
+      case Actions.GET_VIDEOS:
         resultSet = GetVideos(params[0][1], params[0][2], params[0][3]);
         break;
     }

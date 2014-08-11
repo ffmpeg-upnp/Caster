@@ -1,4 +1,4 @@
-package com.lkspencer.caster;
+package com.lkspencer.caster.adapters;
 
 import android.content.Context;
 import android.view.LayoutInflater;
@@ -7,37 +7,39 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
+import com.lkspencer.caster.datamodels.TopicDataModel;
+
 import java.util.ArrayList;
 
 /**
  * Created by Kirk on 8/10/2014.
- * asdf
+ * ArrayAdapter
  */
-public class ClassAdapter extends ArrayAdapter<ClassDataModel> {
+public class TopicAdapter extends ArrayAdapter<TopicDataModel> {
 
-  public ClassAdapter(Context context, int layout, int textView, ArrayList<ClassDataModel> arrayListClassDataModel) {
-    super(context, layout, textView, arrayListClassDataModel);
-    this.arrayListClassDataModel = arrayListClassDataModel;
+  public TopicAdapter(Context context, int layout, int textView, ArrayList<TopicDataModel> arrayListTopicDataModel) {
+    super(context, layout, textView, arrayListTopicDataModel);
+    this.arrayListTopicDataModel = arrayListTopicDataModel;
     this.layout = layout;
-    this.textView = textView;
-    this.context = context;
+    //this.textView = textView;
+    //this.context = context;
   }
 
 
 
-  private ArrayList<ClassDataModel> arrayListClassDataModel;
+  private ArrayList<TopicDataModel> arrayListTopicDataModel;
   private int layout;
-  private int textView;
-  private Context context;
+  //private int textView;
+  //private Context context;
 
 
 
     @Override public int getCount() {
-      return arrayListClassDataModel.size();
+      return arrayListTopicDataModel.size();
     }
 
     @Override public View getView(int position, View contentView, ViewGroup viewGroup) {
-      View view = null;
+      View view;
 
       if (contentView == null) {
         LayoutInflater layoutInflater = (LayoutInflater) getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
@@ -46,9 +48,10 @@ public class ClassAdapter extends ArrayAdapter<ClassDataModel> {
         view = contentView;
       }
       if (view != null) {
-        ((TextView)view).setText(arrayListClassDataModel.get(position).Name);
+        ((TextView)view).setText(arrayListTopicDataModel.get(position).Name);
       }
 
       return view;
     }
+
 }

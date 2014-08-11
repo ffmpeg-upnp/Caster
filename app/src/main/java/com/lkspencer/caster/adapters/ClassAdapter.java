@@ -1,4 +1,4 @@
-package com.lkspencer.caster;
+package com.lkspencer.caster.adapters;
 
 import android.content.Context;
 import android.view.LayoutInflater;
@@ -7,37 +7,39 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
+import com.lkspencer.caster.datamodels.ClassDataModel;
+
 import java.util.ArrayList;
 
 /**
  * Created by Kirk on 8/10/2014.
- * asdf
+ * ArrayAdapter
  */
-public class CurriculumAdapter extends ArrayAdapter<Curriculum> {
+public class ClassAdapter extends ArrayAdapter<ClassDataModel> {
 
-  public CurriculumAdapter(Context context, int layout, int textView, ArrayList<Curriculum> arrayListCurriculum) {
-    super(context, layout, textView, arrayListCurriculum);
-    this.arrayListCurriculum = arrayListCurriculum;
+  public ClassAdapter(Context context, int layout, int textView, ArrayList<ClassDataModel> arrayListClassDataModel) {
+    super(context, layout, textView, arrayListClassDataModel);
+    this.arrayListClassDataModel = arrayListClassDataModel;
     this.layout = layout;
-    this.textView = textView;
-    this.context = context;
+    //this.textView = textView;
+    //this.context = context;
   }
 
 
 
-  private ArrayList<Curriculum> arrayListCurriculum;
+  private ArrayList<ClassDataModel> arrayListClassDataModel;
   private int layout;
-  private int textView;
-  private Context context;
+  //private int textView;
+  //private Context context;
 
 
 
     @Override public int getCount() {
-      return arrayListCurriculum.size();
+      return arrayListClassDataModel.size();
     }
 
     @Override public View getView(int position, View contentView, ViewGroup viewGroup) {
-      View view = null;
+      View view;
 
       if (contentView == null) {
         LayoutInflater layoutInflater = (LayoutInflater) getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
@@ -46,9 +48,10 @@ public class CurriculumAdapter extends ArrayAdapter<Curriculum> {
         view = contentView;
       }
       if (view != null) {
-        ((TextView)view).setText(arrayListCurriculum.get(position).Name);
+        ((TextView)view).setText(arrayListClassDataModel.get(position).Name);
       }
 
       return view;
     }
+
 }

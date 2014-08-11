@@ -32,6 +32,10 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.Result;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
+import com.lkspencer.caster.adapters.ClassAdapter;
+import com.lkspencer.caster.adapters.TopicAdapter;
+import com.lkspencer.caster.datamodels.ClassDataModel;
+import com.lkspencer.caster.datamodels.TopicDataModel;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -61,6 +65,8 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
   private GoogleApiClient apiClient;
   private boolean applicationStarted;
   public static final String TAG = "Main";
+  private int classId;
+  private int topicId;
   private final Cast.Listener castClientListener = new Cast.Listener() {
     @Override public void onApplicationDisconnected(int statusCode) { }
 
@@ -116,7 +122,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     FragmentManager fragmentManager = getSupportFragmentManager();
     fragmentManager
       .beginTransaction()
-      .replace(R.id.container, PlaceholderFragment.newInstance(position))
+      .replace(R.id.container, PlaceholderFragment.newInstance(0))
       .commit();
   }
 
@@ -188,36 +194,33 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
 
 
   public void onSectionAttached(int position) {
-    //0 - List of classes
-    //1 - List of topics
-    //2 - List of videos
     GregorianCalendar now = new GregorianCalendar();
     VideoRepository vr = new VideoRepository(this, now.get(GregorianCalendar.YEAR), now.get(GregorianCalendar.MONTH));
     Integer[] params;
     switch (position) {
       case 0:
-        params = new Integer[3];
+        params = new Integer[4];
         params[0] = VideoRepository.Actions.GET_CLASSES;
-        params[1] = mNavigationDrawerFragment.getCurrentCurriculumId();;
+        params[1] = mNavigationDrawerFragment.getCurrentCurriculumId();
         vr.execute(params);
-        mTitle = getString(R.string.title_section1);
+        mTitle = "Classes";
         break;
       case 1:
-        params = new Integer[3];
-        params[0] = VideoRepository.Actions.GET_CLASSES;
-        params[1] = mNavigationDrawerFragment.getCurrentCurriculumId();;
-        //params[2] = classId;
+        params = new Integer[4];
+        params[0] = VideoRepository.Actions.GET_TOPICS;
+        params[1] = mNavigationDrawerFragment.getCurrentCurriculumId();
+        params[2] = classId;
         vr.execute(params);
-        mTitle = getString(R.string.title_section2);
+        mTitle = "Topics";
         break;
       case 2:
-        params = new Integer[3];
-        params[0] = VideoRepository.Actions.GET_CLASSES;
-        params[1] = mNavigationDrawerFragment.getCurrentCurriculumId();;
+        params = new Integer[4];
+        params[0] = VideoRepository.Actions.GET_VIDEOS;
+        params[1] = mNavigationDrawerFragment.getCurrentCurriculumId();
         //params[2] = classId;
         //params[3] = topicId;
         vr.execute(params);
-        mTitle = getString(R.string.title_section3);
+        mTitle = "Videos";
         break;
     }
   }
@@ -279,32 +282,73 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
   }
 
   public void ProcessResultSet(VideoRepository repository, ResultSet resultSet) {
-    ListView classes = (ListView)findViewById(R.id.classes);
-    try {
-      if (resultSet == null || resultSet.isClosed() || !resultSet.first()) return;
-      ArrayList<ClassDataModel> classDataModels = new ArrayList<ClassDataModel>();
+    ListView classes = (ListView) findViewById(R.id.classes);
+    if (classId == 0) {
+      try {
+        if (resultSet == null || resultSet.isClosed() || !resultSet.first()) return;
+        ArrayList<ClassDataModel> classDataModels = new ArrayList<ClassDataModel>();
 
-      do {
-        ClassDataModel classDataModel = new ClassDataModel();
-        classDataModel.ClassId = resultSet.getInt(1);
-        classDataModel.Name = resultSet.getString(2);
-        classDataModels.add(classDataModel);
-      } while (resultSet.next());
-      ClassAdapter ca = new ClassAdapter(
-              this,
-              android.R.layout.simple_list_item_1,
-              android.R.id.text1,
-              classDataModels);
-      classes.setAdapter(ca);
-      classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-        @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+        do {
+          ClassDataModel classDataModel = new ClassDataModel();
+          classDataModel.ClassId = resultSet.getInt(1);
+          classDataModel.Name = resultSet.getString(2);
+          classDataModels.add(classDataModel);
+        } while (resultSet.next());
+        ClassAdapter ca = new ClassAdapter(
+                this,
+                android.R.layout.simple_list_item_1,
+                android.R.id.text1,
+                classDataModels);
+        classes.setAdapter(ca);
+        classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+          @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+            ClassDataModel c = (ClassDataModel) parent.getAdapter().getItem(position);
+            Main.this.classId = c.ClassId;
+            FragmentManager fragmentManager = getSupportFragmentManager();
+            fragmentManager
+                    .beginTransaction()
+                    .replace(R.id.container, PlaceholderFragment.newInstance(1))
+                    .commit();
+          }
+        });
+      } catch (SQLException e) {
+        e.printStackTrace();
+      } finally {
+        repository.Close();
+      }
+    } else if (topicId == 0) {
+      try {
+        if (resultSet == null || resultSet.isClosed() || !resultSet.first()) return;
+        ArrayList<TopicDataModel> topicDataModels = new ArrayList<TopicDataModel>();
 
-        }
-      });
-    } catch (SQLException e) {
-      e.printStackTrace();
-    } finally {
-      repository.Close();
+        do {
+          TopicDataModel topicDataModel = new TopicDataModel();
+          topicDataModel.TopicId = resultSet.getInt(1);
+          topicDataModel.Name = resultSet.getString(2);
+          topicDataModels.add(topicDataModel);
+        } while (resultSet.next());
+        TopicAdapter ta = new TopicAdapter(
+                this,
+                android.R.layout.simple_list_item_1,
+                android.R.id.text1,
+                topicDataModels);
+        classes.setAdapter(ta);
+        classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+          @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+            TopicDataModel t = (TopicDataModel) parent.getAdapter().getItem(position);
+            Main.this.topicId = t.TopicId;
+            FragmentManager fragmentManager = getSupportFragmentManager();
+            fragmentManager
+                    .beginTransaction()
+                    .replace(R.id.container, PlaceholderFragment.newInstance(1))
+                    .commit();
+          }
+        });
+      } catch (SQLException e) {
+        e.printStackTrace();
+      } finally {
+        repository.Close();
+      }
     }
   }
 
@@ -320,11 +364,12 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
      * fragment.
      */
     private static final String ARG_POSITION_NUMBER = "position_number";
-    private static final String ARG_ID_NUMBER = "id_number";
+    //private static final String ARG_ID_NUMBER = "id_number";
 
 
 
     @Override public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+      /*
       if (savedInstanceState != null) {
         switch (savedInstanceState.getInt(ARG_ID_NUMBER)) {
           case 1:
@@ -333,6 +378,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
             return inflater.inflate(R.layout.fragment_classes, container, false);
         }
       }
+      */
       return inflater.inflate(R.layout.fragment_classes, container, false);
     }
 
