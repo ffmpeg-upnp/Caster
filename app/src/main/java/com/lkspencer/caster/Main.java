@@ -83,12 +83,14 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     @Override public void onConnectionSuspended(int i) { }
   };
   private final GoogleApiClient.OnConnectionFailedListener connectionFailedListener = new GoogleApiClient.OnConnectionFailedListener() {
+    {}
     @Override public void onConnectionFailed(ConnectionResult connectionResult) {
       Toast.makeText(Main.this, "Failed to connect " + connectionResult.toString(), Toast.LENGTH_SHORT).show();
       setSelectedDevice(null);
     }
   };
   private final ResultCallback<Cast.ApplicationConnectionResult> connectionResultCallback = new ResultCallback<Cast.ApplicationConnectionResult>() {
+    {}
     @Override public void onResult(Cast.ApplicationConnectionResult result) {
       Toast.makeText(Main.this, "result: " + result.getStatus().getStatusMessage(), Toast.LENGTH_SHORT).show();
 
@@ -262,6 +264,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
       repository.classDataModels);
     classes.setAdapter(ca);
     classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+      {}
       @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         ClassDataModel c = (ClassDataModel) parent.getAdapter().getItem(position);
         Main.this.classId = c.ClassId;
@@ -283,6 +286,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
             repository.topicDataModels);
     classes.setAdapter(ta);
     classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+      {}
       @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         TopicDataModel t = (TopicDataModel) parent.getAdapter().getItem(position);
         Main.this.topicId = t.TopicId;
@@ -304,6 +308,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
             repository.videoDataModels);
     classes.setAdapter(va);
     classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+      {}
       @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         VideoDataModel v = (VideoDataModel) parent.getAdapter().getItem(position);
         String url = v.Link;
@@ -321,8 +326,6 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
         if (apiClient != null) {
           rmp.load(apiClient, data, true);
         }
-        //v.Link
-        //TODO: Play video
       }
     });
   }
