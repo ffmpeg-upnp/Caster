@@ -18,7 +18,10 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.Spinner;
+import android.widget.SpinnerAdapter;
 import android.widget.Toast;
 
 import com.google.android.gms.cast.Cast;
@@ -38,7 +41,13 @@ import com.lkspencer.caster.datamodels.ClassDataModel;
 import com.lkspencer.caster.datamodels.TopicDataModel;
 import com.lkspencer.caster.datamodels.VideoDataModel;
 
+import java.text.DateFormatSymbols;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.Locale;
 
 
 public class Main extends ActionBarActivity implements NavigationDrawerFragment.NavigationDrawerCallbacks, IVideoRepositoryCallback {
@@ -65,6 +74,9 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
   public static final String TAG = "Main";
   private int classId;
   private int topicId;
+  private int year;
+  private int month;
+  private int main_position = 0;
   private final Cast.Listener castClientListener = new Cast.Listener() {
     @Override public void onApplicationDisconnected(int statusCode) { }
 
@@ -115,16 +127,20 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
 
     mediaRouter = MediaRouter.getInstance(getApplicationContext());
     mediaRouteSelector = new MediaRouteSelector.Builder().addControlCategory(CastMediaControlIntent.categoryForCast(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID)).build();
+    GregorianCalendar now = new GregorianCalendar();
+    month = now.get(Calendar.MONTH) + 1;
+    year = now.get(Calendar.YEAR);
   }
 
   @Override public void onNavigationDrawerItemSelected(int position) {
     this.classId = 0;
     this.topicId = 0;
+    main_position = 0;
     // update the main content by replacing fragments
     FragmentManager fragmentManager = getSupportFragmentManager();
     fragmentManager
       .beginTransaction()
-      .replace(R.id.container, PlaceholderFragment.newInstance(0))
+      .replace(R.id.container, PlaceholderFragment.newInstance(main_position))
       .commit();
   }
 
@@ -164,8 +180,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
 
 
   public void onSectionAttached(int position) {
-    GregorianCalendar now = new GregorianCalendar();
-    VideoRepository vr = new VideoRepository(this, now.get(GregorianCalendar.YEAR), now.get(GregorianCalendar.MONTH));
+    VideoRepository vr = new VideoRepository(this, year, month);
     Integer[] params;
     switch (position) {
       case 0:
@@ -195,6 +210,58 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     }
     ActionBar actionBar = getSupportActionBar();
     actionBar.setTitle(mTitle);
+  }
+
+  private void SetSpinnerSelectedValue(Spinner spinner, String value) {
+    if (value == null || "".equalsIgnoreCase(value)) return;
+
+    SpinnerAdapter adapter = spinner.getAdapter();
+    int count = adapter.getCount();
+    for (int i = 0; i < count; i++) {
+      if (value.equalsIgnoreCase((String)adapter.getItem(i))) {
+        spinner.setSelection(i);
+        break;
+      }
+    }
+  }
+
+  public String getMonth(int month) {
+    return new DateFormatSymbols().getMonths()[month];
+  }
+
+  public int getMonthInt(String value) {
+    Date date = null;
+    try {
+      date = new SimpleDateFormat("MMMM", Locale.ENGLISH).parse(value);
+    } catch (ParseException e) {
+      e.printStackTrace();
+    }
+    Calendar calendar = Calendar.getInstance();
+    calendar.setTime(date);
+    return calendar.get(Calendar.MONTH) + 1;
+  }
+
+  public void onFragmentInflated(View v) {
+    final Spinner year_filter = (Spinner)v.findViewById(R.id.year_filter);
+    SetSpinnerSelectedValue(year_filter, String.valueOf(year));
+    year_filter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+      @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+        year = Integer.parseInt((String)year_filter.getSelectedItem());
+        onSectionAttached(main_position);
+      }
+
+      @Override public void onNothingSelected(AdapterView<?> parent) { }
+    });
+    final Spinner month_filter = (Spinner)v.findViewById(R.id.month_filter);
+    SetSpinnerSelectedValue(month_filter, getMonth(month - 1));
+    month_filter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+      @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+        month = getMonthInt((String)parent.getItemAtPosition(position));
+        onSectionAttached(main_position);
+      }
+
+      @Override public void onNothingSelected(AdapterView<?> parent) { }
+    });
   }
 
   public void restoreActionBar() {
@@ -256,6 +323,8 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
   public void ProcessCurriculums(VideoRepository repository) { }
 
   public void ProcessClasses(VideoRepository repository) {
+    LinearLayout filters = (LinearLayout)findViewById(R.id.filters);
+    filters.setVisibility(View.VISIBLE);
     ListView classes = (ListView) findViewById(R.id.classes);
     ClassAdapter ca = new ClassAdapter(
       this,
@@ -268,16 +337,19 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
       @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         ClassDataModel c = (ClassDataModel) parent.getAdapter().getItem(position);
         Main.this.classId = c.ClassId;
+        main_position = 1;
         FragmentManager fragmentManager = getSupportFragmentManager();
         fragmentManager
           .beginTransaction()
-          .replace(R.id.container, PlaceholderFragment.newInstance(1))
+          .replace(R.id.container, PlaceholderFragment.newInstance(main_position))
           .commit();
       }
     });
   }
 
   public void ProcessTopics(VideoRepository repository) {
+    LinearLayout filters = (LinearLayout)findViewById(R.id.filters);
+    filters.setVisibility(View.VISIBLE);
     ListView classes = (ListView) findViewById(R.id.classes);
     TopicAdapter ta = new TopicAdapter(
             this,
@@ -290,16 +362,19 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
       @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         TopicDataModel t = (TopicDataModel) parent.getAdapter().getItem(position);
         Main.this.topicId = t.TopicId;
+        main_position = 2;
         FragmentManager fragmentManager = getSupportFragmentManager();
         fragmentManager
                 .beginTransaction()
-                .replace(R.id.container, PlaceholderFragment.newInstance(2))
+                .replace(R.id.container, PlaceholderFragment.newInstance(main_position))
                 .commit();
       }
     });
   }
 
   public void ProcessVideos(VideoRepository repository) {
+    LinearLayout filters = (LinearLayout)findViewById(R.id.filters);
+    filters.setVisibility(View.GONE);
     ListView classes = (ListView) findViewById(R.id.classes);
     VideoAdapter va = new VideoAdapter(
             this,
@@ -342,7 +417,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
      * fragment.
      */
     private static final String ARG_POSITION_NUMBER = "position_number";
-    //private static final String ARG_ID_NUMBER = "id_number";
+    private Activity activity;
 
 
 
@@ -357,11 +432,14 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
         }
       }
       */
-      return inflater.inflate(R.layout.fragment_classes, container, false);
+      View v = inflater.inflate(R.layout.fragment_classes, container, false);
+      ((Main)this.activity).onFragmentInflated(v);
+      return v;
     }
 
     @Override public void onAttach(Activity activity) {
       super.onAttach(activity);
+      this.activity = activity;
       ((Main)activity).onSectionAttached(getArguments().getInt(ARG_POSITION_NUMBER));
     }
 

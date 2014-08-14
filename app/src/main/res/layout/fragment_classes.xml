@@ -1,8 +1,34 @@
-<ListView xmlns:android="http://schemas.android.com/apk/res/android"
-          android:id="@+id/classes"
-          android:layout_width="match_parent"
-          android:layout_height="match_parent"
-          android:choiceMode="singleChoice"
-          android:divider="@drawable/abc_list_divider_holo_light"
-          android:dividerHeight="1dp"
-          android:background="#eee" />
+<LinearLayout
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  android:orientation="vertical"
+  android:layout_width="fill_parent"
+  android:layout_height="fill_parent">
+  <LinearLayout
+    android:id="@+id/filters"
+    android:orientation="horizontal"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content">
+    <Spinner
+      android:id="@+id/month_filter"
+      android:padding="12dp"
+      android:entries="@array/months_array"
+      android:layout_weight="0.5"
+      android:layout_width="fill_parent"
+      android:layout_height="wrap_content" />
+    <Spinner
+      android:id="@+id/year_filter"
+      android:padding="12dp"
+      android:entries="@array/years_array"
+      android:layout_weight="0.5"
+      android:layout_width="fill_parent"
+      android:layout_height="wrap_content" />
+  </LinearLayout>
+  <ListView
+    android:id="@+id/classes"
+    android:layout_width="match_parent"
+    android:layout_height="fill_parent"
+    android:choiceMode="singleChoice"
+    android:divider="@drawable/abc_list_divider_holo_light"
+    android:dividerHeight="1dp"
+    android:background="#eee" />
+</LinearLayout>
