@@ -2,6 +2,7 @@ package com.lkspencer.caster;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.view.MenuItemCompat;
@@ -12,6 +13,7 @@ import android.support.v7.app.MediaRouteActionProvider;
 import android.support.v7.media.MediaRouteSelector;
 import android.support.v7.media.MediaRouter;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -62,6 +64,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     }
 
     @Override public void onRouteUnselected(MediaRouter router, MediaRouter.RouteInfo route) {
+      teardown();
       setSelectedDevice(null);
     }
 
@@ -77,15 +80,21 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
   private int year;
   private int month;
   private int main_position = 0;
+  private static final double VOLUME_INCREMENT = 0.05;
+  private boolean monthSelected = false;
+  private boolean yearSelected = false;
+  private RemoteMediaPlayer mRemoteMediaPlayer;
   private final Cast.Listener castClientListener = new Cast.Listener() {
-    @Override public void onApplicationDisconnected(int statusCode) { }
+    @Override public void onApplicationDisconnected(int statusCode) {
+      mRemoteMediaPlayer = null;
+    }
 
     @Override public void onVolumeChanged() { }
   };
   private final GoogleApiClient.ConnectionCallbacks connectionCallback = new GoogleApiClient.ConnectionCallbacks() {
     @Override public void onConnected(Bundle bundle) {
-      Toast.makeText(Main.this, "Connected", Toast.LENGTH_SHORT).show();
       try {
+        mRemoteMediaPlayer = new RemoteMediaPlayer();
         Cast.CastApi.launchApplication(apiClient, CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID, false).setResultCallback(connectionResultCallback);
       } catch (Exception e) {
         Log.e(TAG, "Failed to launch application", e);
@@ -93,6 +102,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     }
 
     @Override public void onConnectionSuspended(int i) { }
+
   };
   private final GoogleApiClient.OnConnectionFailedListener connectionFailedListener = new GoogleApiClient.OnConnectionFailedListener() {
     {}
@@ -104,8 +114,6 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
   private final ResultCallback<Cast.ApplicationConnectionResult> connectionResultCallback = new ResultCallback<Cast.ApplicationConnectionResult>() {
     {}
     @Override public void onResult(Cast.ApplicationConnectionResult result) {
-      Toast.makeText(Main.this, "result: " + result.getStatus().getStatusMessage(), Toast.LENGTH_SHORT).show();
-
       Status status = result.getStatus();
       if (status.isSuccess()) {
         applicationStarted = true;
@@ -177,6 +185,47 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     super.onStop();
   }
 
+  @Override public boolean dispatchKeyEvent(@NonNull KeyEvent event) {
+    int action = event.getAction();
+    int keyCode = event.getKeyCode();
+    switch (keyCode) {
+      case KeyEvent.KEYCODE_VOLUME_UP:
+        if (action == KeyEvent.ACTION_DOWN) {
+          if (mRemoteMediaPlayer != null) {
+            double currentVolume = Cast.CastApi.getVolume(apiClient);
+            if (currentVolume < 1.0) {
+              try {
+                Cast.CastApi.setVolume(apiClient, Math.min(currentVolume + VOLUME_INCREMENT, 1.0));
+              } catch (Exception e) {
+                Log.e(TAG, "unable to set volume", e);
+              }
+            }
+          } else {
+            Log.e(TAG, "dispatchKeyEvent - volume up");
+          }
+        }
+        return true;
+      case KeyEvent.KEYCODE_VOLUME_DOWN:
+        if (action == KeyEvent.ACTION_DOWN) {
+          if (mRemoteMediaPlayer != null) {
+            double currentVolume = Cast.CastApi.getVolume(apiClient);
+            if (currentVolume > 0.0) {
+              try {
+                Cast.CastApi.setVolume(apiClient, Math.max(currentVolume - VOLUME_INCREMENT, 0.0));
+              } catch (Exception e) {
+                Log.e(TAG, "unable to set volume", e);
+              }
+            }
+          } else {
+            Log.e(TAG, "dispatchKeyEvent - volume down");
+          }
+        }
+        return true;
+      default:
+        return super.dispatchKeyEvent(event);
+    }
+  }
+
 
 
   public void onSectionAttached(int position) {
@@ -245,19 +294,30 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     final Spinner year_filter = (Spinner)v.findViewById(R.id.year_filter);
     SetSpinnerSelectedValue(year_filter, String.valueOf(year));
     year_filter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-      @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-        year = Integer.parseInt((String)year_filter.getSelectedItem());
-        onSectionAttached(main_position);
+      @Override
+      public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+        year = Integer.parseInt((String) year_filter.getSelectedItem());
+        if (yearSelected) {
+          onSectionAttached(main_position);
+        } else {
+          yearSelected = true;
+        }
       }
 
-      @Override public void onNothingSelected(AdapterView<?> parent) { }
+      @Override
+      public void onNothingSelected(AdapterView<?> parent) {
+      }
     });
     final Spinner month_filter = (Spinner)v.findViewById(R.id.month_filter);
     SetSpinnerSelectedValue(month_filter, getMonth(month - 1));
     month_filter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
       @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
         month = getMonthInt((String)parent.getItemAtPosition(position));
-        onSectionAttached(main_position);
+        if (monthSelected) {
+          onSectionAttached(main_position);
+        } else {
+          monthSelected = true;
+        }
       }
 
       @Override public void onNothingSelected(AdapterView<?> parent) { }
@@ -333,16 +393,19 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
       repository.classDataModels);
     classes.setAdapter(ca);
     classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-      {}
-      @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+      {
+      }
+
+      @Override
+      public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         ClassDataModel c = (ClassDataModel) parent.getAdapter().getItem(position);
         Main.this.classId = c.ClassId;
         main_position = 1;
         FragmentManager fragmentManager = getSupportFragmentManager();
         fragmentManager
-          .beginTransaction()
-          .replace(R.id.container, PlaceholderFragment.newInstance(main_position))
-          .commit();
+                .beginTransaction()
+                .replace(R.id.container, PlaceholderFragment.newInstance(main_position))
+                .commit();
       }
     });
   }
@@ -389,7 +452,6 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
         String url = v.Link;
         String title = v.Name;
         String contentType = "video/mpeg";
-        RemoteMediaPlayer rmp = new RemoteMediaPlayer();
         MediaMetadata mMediaMetadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MOVIE);
         mMediaMetadata.putString(MediaMetadata.KEY_TITLE, title);
         MediaInfo data = new MediaInfo.Builder(url)
@@ -397,14 +459,38 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
                 .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
                 .setMetadata(mMediaMetadata)
                 .build();
-
-        if (apiClient != null) {
-          rmp.load(apiClient, data, true);
+        if (apiClient != null && mRemoteMediaPlayer != null) {
+          mRemoteMediaPlayer.load(apiClient, data, true);
         }
       }
     });
   }
 
+  private void teardown() {
+    Log.d(TAG, "teardown");
+    if (apiClient != null) {
+      if (applicationStarted) {
+        if (apiClient.isConnected()) {
+          /*
+          try {
+            Cast.CastApi.stopApplication(apiClient, sessionId);
+            if (mHelloWorldChannel != null) {
+              Cast.CastApi.removeMessageReceivedCallbacks( apiClient, mHelloWorldChannel.getNamespace());
+              mHelloWorldChannel = null;
+            }
+          } catch (IOException e) {
+            Log.e(TAG, "Exception while removing channel", e);
+          }
+          */
+          apiClient.disconnect();
+        }
+        applicationStarted = false;
+      }
+      apiClient = null;
+    }
+    selectedDevice = null;
+    mRemoteMediaPlayer = null;
+  }
 
 
   /**
