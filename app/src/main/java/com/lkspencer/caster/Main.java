@@ -20,8 +20,11 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
+import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.SpinnerAdapter;
 import android.widget.Toast;
@@ -31,6 +34,7 @@ import com.google.android.gms.cast.CastDevice;
 import com.google.android.gms.cast.CastMediaControlIntent;
 import com.google.android.gms.cast.MediaInfo;
 import com.google.android.gms.cast.MediaMetadata;
+import com.google.android.gms.cast.MediaStatus;
 import com.google.android.gms.cast.RemoteMediaPlayer;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -56,19 +60,6 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
 
   private NavigationDrawerFragment mNavigationDrawerFragment;
   private CharSequence mTitle;
-  private final MediaRouter.Callback mediaRouterCallback = new MediaRouter.Callback() {
-
-    @Override public void onRouteSelected(MediaRouter router, MediaRouter.RouteInfo route) {
-      CastDevice device = CastDevice.getFromBundle(route.getExtras());
-      setSelectedDevice(device);
-    }
-
-    @Override public void onRouteUnselected(MediaRouter router, MediaRouter.RouteInfo route) {
-      teardown();
-      setSelectedDevice(null);
-    }
-
-  };
   private MediaRouter mediaRouter;
   private MediaRouteSelector mediaRouteSelector;
   private CastDevice selectedDevice;
@@ -83,11 +74,27 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
   private static final double VOLUME_INCREMENT = 0.05;
   private boolean monthSelected = false;
   private boolean yearSelected = false;
+  private boolean playing = false;
+  private boolean paused = true;
   private RemoteMediaPlayer mRemoteMediaPlayer;
-  private final Cast.Listener castClientListener = new Cast.Listener() {
-    @Override public void onApplicationDisconnected(int statusCode) {
-      mRemoteMediaPlayer = null;
+  private ImageButton pause;
+  private LinearLayout playback;
+  private SeekBar seekBar;
+  private final MediaRouter.Callback mediaRouterCallback = new MediaRouter.Callback() {
+
+    @Override public void onRouteSelected(MediaRouter router, MediaRouter.RouteInfo route) {
+      CastDevice device = CastDevice.getFromBundle(route.getExtras());
+      setSelectedDevice(device);
     }
+
+    @Override public void onRouteUnselected(MediaRouter router, MediaRouter.RouteInfo route) {
+      teardown();
+      setSelectedDevice(null);
+    }
+
+  };
+  private final Cast.Listener castClientListener = new Cast.Listener() {
+    @Override public void onApplicationDisconnected(int statusCode) { }
 
     @Override public void onVolumeChanged() { }
   };
@@ -127,7 +134,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
-    mNavigationDrawerFragment = (NavigationDrawerFragment)getSupportFragmentManager().findFragmentById(R.id.navigation_drawer);
+    mNavigationDrawerFragment = (NavigationDrawerFragment) getSupportFragmentManager().findFragmentById(R.id.navigation_drawer);
     mTitle = getTitle();
 
     // Set up the drawer.
@@ -294,8 +301,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     final Spinner year_filter = (Spinner)v.findViewById(R.id.year_filter);
     SetSpinnerSelectedValue(year_filter, String.valueOf(year));
     year_filter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-      @Override
-      public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+      @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
         year = Integer.parseInt((String) year_filter.getSelectedItem());
         if (yearSelected) {
           onSectionAttached(main_position);
@@ -304,9 +310,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
         }
       }
 
-      @Override
-      public void onNothingSelected(AdapterView<?> parent) {
-      }
+      @Override public void onNothingSelected(AdapterView<?> parent) { }
     });
     final Spinner month_filter = (Spinner)v.findViewById(R.id.month_filter);
     SetSpinnerSelectedValue(month_filter, getMonth(month - 1));
@@ -321,6 +325,80 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
       }
 
       @Override public void onNothingSelected(AdapterView<?> parent) { }
+    });
+    pause = (ImageButton)v.findViewById(R.id.pause);
+    pause.setOnClickListener(new View.OnClickListener() {
+      {} @Override public void onClick(View v) {
+        if (mRemoteMediaPlayer != null && mRemoteMediaPlayer.getStreamDuration() > 0 && mRemoteMediaPlayer.getMediaStatus() != null) {
+          if (paused) {
+            pause.setImageResource(android.R.drawable.ic_media_pause);
+            mRemoteMediaPlayer.play(apiClient).setResultCallback(new ResultCallback<RemoteMediaPlayer.MediaChannelResult>() {
+              {} @Override public void onResult(RemoteMediaPlayer.MediaChannelResult result) {
+                Status status = result.getStatus();
+                if (!status.isSuccess()) {
+                  Log.w(TAG, "Unable to toggle pause: " + status.getStatusCode());
+                } else {
+                  paused = false;
+                }
+              }
+            });
+          } else {
+            pause.setImageResource(android.R.drawable.ic_media_play);
+            mRemoteMediaPlayer.pause(apiClient).setResultCallback(new ResultCallback<RemoteMediaPlayer.MediaChannelResult>() {
+              {} @Override public void onResult(RemoteMediaPlayer.MediaChannelResult result) {
+                Status status = result.getStatus();
+                if (!status.isSuccess()) {
+                  Log.w(TAG, "Unable to toggle pause: " + status.getStatusCode());
+                } else {
+                  paused = true;
+                }
+              }
+            });
+          }
+        }
+      }
+    });
+    Button stop = (Button)v.findViewById(R.id.stop);
+    stop.setOnClickListener(new View.OnClickListener() {
+      {} @Override public void onClick(View v) {
+        if (mRemoteMediaPlayer != null && mRemoteMediaPlayer.getStreamDuration() > 0 && mRemoteMediaPlayer.getMediaStatus() != null) {
+          mRemoteMediaPlayer.stop(apiClient).setResultCallback(new ResultCallback<RemoteMediaPlayer.MediaChannelResult>() {
+            {} @Override public void onResult(RemoteMediaPlayer.MediaChannelResult result) {
+              Status status = result.getStatus();
+              if (!status.isSuccess()) {
+                Log.w(TAG, "Unable to stop playback: " + status.getStatusCode());
+              } else {
+                playback.setVisibility(View.GONE);
+                pause.setImageResource(android.R.drawable.ic_media_play);
+                paused = true;
+                playing = false;
+              }
+            }
+          });
+        } else {
+          playback.setVisibility(View.GONE);
+          pause.setImageResource(android.R.drawable.ic_media_play);
+          paused = true;
+          playing = false;
+        }
+      }
+    });
+    playback = (LinearLayout)v.findViewById(R.id.playback);
+    seekBar = (SeekBar)v.findViewById(R.id.seekBar);
+    seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+      private int progress;
+
+      @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+        this.progress = progress;
+      }
+
+      @Override public void onStartTrackingTouch(SeekBar seekBar) { }
+
+      @Override public void onStopTrackingTouch(SeekBar seekBar) {
+        if (mRemoteMediaPlayer != null && mRemoteMediaPlayer.getStreamDuration() > 0 && mRemoteMediaPlayer.getMediaStatus() != null) {
+          mRemoteMediaPlayer.seek(apiClient, progress);
+        }
+      }
     });
   }
 
@@ -446,14 +524,15 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
             repository.videoDataModels);
     classes.setAdapter(va);
     classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-      {}
-      @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+      {} @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         VideoDataModel v = (VideoDataModel) parent.getAdapter().getItem(position);
         String url = v.Link;
         String title = v.Name;
         String contentType = "video/mpeg";
         MediaMetadata mMediaMetadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MOVIE);
         mMediaMetadata.putString(MediaMetadata.KEY_TITLE, title);
+        //url = "http://www.ghostwhisperer.us/Music/Queen/We%20Will%20Rock%20You.mp3";
+        //contentType = "audio/mpeg";
         MediaInfo data = new MediaInfo.Builder(url)
                 .setContentType(contentType)
                 .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
@@ -461,6 +540,10 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
                 .build();
         if (apiClient != null && mRemoteMediaPlayer != null) {
           mRemoteMediaPlayer.load(apiClient, data, true);
+          pause.setImageResource(android.R.drawable.ic_media_pause);
+          playback.setVisibility(View.VISIBLE);
+          playing = true;
+          paused = false;
         }
       }
     });
