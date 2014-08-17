@@ -34,7 +34,6 @@ import com.google.android.gms.cast.CastDevice;
 import com.google.android.gms.cast.CastMediaControlIntent;
 import com.google.android.gms.cast.MediaInfo;
 import com.google.android.gms.cast.MediaMetadata;
-import com.google.android.gms.cast.MediaStatus;
 import com.google.android.gms.cast.RemoteMediaPlayer;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -76,7 +75,8 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
   private boolean yearSelected = false;
   private boolean playing = false;
   private boolean paused = true;
-  private RemoteMediaPlayer mRemoteMediaPlayer;
+  private String sessionId;
+  public static RemoteMediaPlayer mRemoteMediaPlayer;
   private ImageButton pause;
   private LinearLayout playback;
   private SeekBar seekBar;
@@ -103,6 +103,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
       try {
         mRemoteMediaPlayer = new RemoteMediaPlayer();
         Cast.CastApi.launchApplication(apiClient, CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID, false).setResultCallback(connectionResultCallback);
+
       } catch (Exception e) {
         Log.e(TAG, "Failed to launch application", e);
       }
@@ -119,10 +120,10 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     }
   };
   private final ResultCallback<Cast.ApplicationConnectionResult> connectionResultCallback = new ResultCallback<Cast.ApplicationConnectionResult>() {
-    {}
-    @Override public void onResult(Cast.ApplicationConnectionResult result) {
+    {} @Override public void onResult(Cast.ApplicationConnectionResult result) {
       Status status = result.getStatus();
       if (status.isSuccess()) {
+        sessionId = result.getSessionId();
         applicationStarted = true;
       }
     }
@@ -329,7 +330,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     pause = (ImageButton)v.findViewById(R.id.pause);
     pause.setOnClickListener(new View.OnClickListener() {
       {} @Override public void onClick(View v) {
-        if (mRemoteMediaPlayer != null && mRemoteMediaPlayer.getStreamDuration() > 0 && mRemoteMediaPlayer.getMediaStatus() != null) {
+        if (mRemoteMediaPlayer != null && playing) {
           if (paused) {
             pause.setImageResource(android.R.drawable.ic_media_pause);
             mRemoteMediaPlayer.play(apiClient).setResultCallback(new ResultCallback<RemoteMediaPlayer.MediaChannelResult>() {
@@ -361,7 +362,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     Button stop = (Button)v.findViewById(R.id.stop);
     stop.setOnClickListener(new View.OnClickListener() {
       {} @Override public void onClick(View v) {
-        if (mRemoteMediaPlayer != null && mRemoteMediaPlayer.getStreamDuration() > 0 && mRemoteMediaPlayer.getMediaStatus() != null) {
+        if (mRemoteMediaPlayer != null) {
           mRemoteMediaPlayer.stop(apiClient).setResultCallback(new ResultCallback<RemoteMediaPlayer.MediaChannelResult>() {
             {} @Override public void onResult(RemoteMediaPlayer.MediaChannelResult result) {
               Status status = result.getStatus();
@@ -541,9 +542,9 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
         if (apiClient != null && mRemoteMediaPlayer != null) {
           mRemoteMediaPlayer.load(apiClient, data, true);
           pause.setImageResource(android.R.drawable.ic_media_pause);
-          playback.setVisibility(View.VISIBLE);
           playing = true;
           paused = false;
+          playback.setVisibility(View.VISIBLE);
         }
       }
     });
