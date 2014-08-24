@@ -34,7 +34,6 @@ import com.google.android.gms.cast.CastDevice;
 import com.google.android.gms.cast.CastMediaControlIntent;
 import com.google.android.gms.cast.MediaInfo;
 import com.google.android.gms.cast.MediaMetadata;
-import com.google.android.gms.cast.MediaStatus;
 import com.google.android.gms.cast.RemoteMediaPlayer;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -47,6 +46,7 @@ import com.lkspencer.caster.datamodels.ClassDataModel;
 import com.lkspencer.caster.datamodels.TopicDataModel;
 import com.lkspencer.caster.datamodels.VideoDataModel;
 
+import java.io.IOException;
 import java.text.DateFormatSymbols;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -74,12 +74,14 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
   private static final double VOLUME_INCREMENT = 0.05;
   private boolean monthSelected = false;
   private boolean yearSelected = false;
-  private boolean playing = false;
+  //private boolean playing = false;
   private boolean paused = true;
+  private String sessionId;
   private RemoteMediaPlayer mRemoteMediaPlayer;
   private ImageButton pause;
   private LinearLayout playback;
-  private SeekBar seekBar;
+  //private SeekBar seekBar;
+  private CasterChannel casterChannel;
   private final MediaRouter.Callback mediaRouterCallback = new MediaRouter.Callback() {
 
     @Override public void onRouteSelected(MediaRouter router, MediaRouter.RouteInfo route) {
@@ -101,7 +103,6 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
   private final GoogleApiClient.ConnectionCallbacks connectionCallback = new GoogleApiClient.ConnectionCallbacks() {
     @Override public void onConnected(Bundle bundle) {
       try {
-        mRemoteMediaPlayer = new RemoteMediaPlayer();
         Cast.CastApi.launchApplication(apiClient, CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID, false).setResultCallback(connectionResultCallback);
       } catch (Exception e) {
         Log.e(TAG, "Failed to launch application", e);
@@ -124,6 +125,49 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
       Status status = result.getStatus();
       if (status.isSuccess()) {
         applicationStarted = true;
+        sessionId = result.getSessionId();
+
+        mRemoteMediaPlayer = new RemoteMediaPlayer();
+        mRemoteMediaPlayer.setOnStatusUpdatedListener(new RemoteMediaPlayer.OnStatusUpdatedListener() {
+          {} @Override public void onStatusUpdated() {
+            /*
+            MediaStatus mediaStatus = mRemoteMediaPlayer.getMediaStatus();
+            if (mediaStatus != null) {
+              boolean isPlaying = mediaStatus.getPlayerState() == MediaStatus.PLAYER_STATE_PLAYING;
+            }
+            */
+          }
+        });
+
+        mRemoteMediaPlayer.setOnMetadataUpdatedListener(new RemoteMediaPlayer.OnMetadataUpdatedListener() {
+          {} @Override public void onMetadataUpdated() {
+            /*
+            MediaInfo mediaInfo = mRemoteMediaPlayer.getMediaInfo();
+            if (mediaInfo != null) {
+              MediaMetadata metadata = mediaInfo.getMetadata();
+            }
+            */
+          }
+        });
+
+        try {
+          Cast.CastApi.setMessageReceivedCallbacks(apiClient, mRemoteMediaPlayer.getNamespace(), mRemoteMediaPlayer);
+        } catch (IOException e) {
+          Log.e(TAG, "Exception while creating media channel", e);
+        }
+        mRemoteMediaPlayer
+          .requestStatus(apiClient)
+          .setResultCallback(new ResultCallback<RemoteMediaPlayer.MediaChannelResult>() {
+            {} @Override public void onResult(RemoteMediaPlayer.MediaChannelResult result) {
+                if (result.getStatus().isSuccess()) {
+                  Log.e(TAG, "The status has been requested!");
+                } else {
+                  Log.e(TAG, "Failed to request status.");
+                }
+              }
+            });
+      } else {
+        teardown();
       }
     }
   };
@@ -329,7 +373,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     pause = (ImageButton)v.findViewById(R.id.pause);
     pause.setOnClickListener(new View.OnClickListener() {
       {} @Override public void onClick(View v) {
-        if (mRemoteMediaPlayer != null && mRemoteMediaPlayer.getStreamDuration() > 0 && mRemoteMediaPlayer.getMediaStatus() != null) {
+        if (mRemoteMediaPlayer != null /*&& mRemoteMediaPlayer.getStreamDuration() > 0 && mRemoteMediaPlayer.getMediaStatus() != null*/) {
           if (paused) {
             pause.setImageResource(android.R.drawable.ic_media_pause);
             mRemoteMediaPlayer.play(apiClient).setResultCallback(new ResultCallback<RemoteMediaPlayer.MediaChannelResult>() {
@@ -361,7 +405,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     Button stop = (Button)v.findViewById(R.id.stop);
     stop.setOnClickListener(new View.OnClickListener() {
       {} @Override public void onClick(View v) {
-        if (mRemoteMediaPlayer != null && mRemoteMediaPlayer.getStreamDuration() > 0 && mRemoteMediaPlayer.getMediaStatus() != null) {
+        if (mRemoteMediaPlayer != null) {
           mRemoteMediaPlayer.stop(apiClient).setResultCallback(new ResultCallback<RemoteMediaPlayer.MediaChannelResult>() {
             {} @Override public void onResult(RemoteMediaPlayer.MediaChannelResult result) {
               Status status = result.getStatus();
@@ -371,7 +415,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
                 playback.setVisibility(View.GONE);
                 pause.setImageResource(android.R.drawable.ic_media_play);
                 paused = true;
-                playing = false;
+                //playing = false;
               }
             }
           });
@@ -379,12 +423,12 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
           playback.setVisibility(View.GONE);
           pause.setImageResource(android.R.drawable.ic_media_play);
           paused = true;
-          playing = false;
+          //playing = false;
         }
       }
     });
     playback = (LinearLayout)v.findViewById(R.id.playback);
-    seekBar = (SeekBar)v.findViewById(R.id.seekBar);
+    SeekBar seekBar = (SeekBar)v.findViewById(R.id.seekBar);
     seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
       private int progress;
 
@@ -395,7 +439,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
       @Override public void onStartTrackingTouch(SeekBar seekBar) { }
 
       @Override public void onStopTrackingTouch(SeekBar seekBar) {
-        if (mRemoteMediaPlayer != null && mRemoteMediaPlayer.getStreamDuration() > 0 && mRemoteMediaPlayer.getMediaStatus() != null) {
+        if (mRemoteMediaPlayer != null) {
           mRemoteMediaPlayer.seek(apiClient, progress);
         }
       }
@@ -531,19 +575,36 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
         String contentType = "video/mpeg";
         MediaMetadata mMediaMetadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MOVIE);
         mMediaMetadata.putString(MediaMetadata.KEY_TITLE, title);
-        //url = "http://www.ghostwhisperer.us/Music/Queen/We%20Will%20Rock%20You.mp3";
-        //contentType = "audio/mpeg";
-        MediaInfo data = new MediaInfo.Builder(url)
+        //*
+        url = "http://www.ghostwhisperer.us/Music/Queen/We%20Will%20Rock%20You.mp3";
+        contentType = "audio/mpeg";
+        mMediaMetadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MUSIC_TRACK);
+        mMediaMetadata.putString(MediaMetadata.KEY_TITLE, "We Will Rock You");
+        //*/
+        final MediaInfo data = new MediaInfo.Builder(url)
                 .setContentType(contentType)
                 .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
                 .setMetadata(mMediaMetadata)
                 .build();
         if (apiClient != null && mRemoteMediaPlayer != null) {
-          mRemoteMediaPlayer.load(apiClient, data, true);
-          pause.setImageResource(android.R.drawable.ic_media_pause);
-          playback.setVisibility(View.VISIBLE);
-          playing = true;
-          paused = false;
+          try {
+            mRemoteMediaPlayer.load(apiClient, data, true).setResultCallback(new ResultCallback<RemoteMediaPlayer.MediaChannelResult>() {
+              @Override public void onResult(RemoteMediaPlayer.MediaChannelResult result) {
+                if (result.getStatus().isSuccess()) {
+                  mRemoteMediaPlayer.load(apiClient, data, true);
+                  pause.setImageResource(android.R.drawable.ic_media_pause);
+                  playback.setVisibility(View.VISIBLE);
+                  //playing = true;
+                  paused = false;
+                  Log.d(TAG, "Media loaded successfully");
+                }
+              }
+            });
+          } catch (IllegalStateException e) {
+            Log.e(TAG, "Problem occurred with media during loading", e);
+          } catch (Exception e) {
+            Log.e(TAG, "Problem opening media during loading", e);
+          }
         }
       }
     });
@@ -554,17 +615,15 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     if (apiClient != null) {
       if (applicationStarted) {
         if (apiClient.isConnected()) {
-          /*
+          Cast.CastApi.stopApplication(apiClient, sessionId);
           try {
-            Cast.CastApi.stopApplication(apiClient, sessionId);
-            if (mHelloWorldChannel != null) {
-              Cast.CastApi.removeMessageReceivedCallbacks( apiClient, mHelloWorldChannel.getNamespace());
-              mHelloWorldChannel = null;
+            if (casterChannel != null) {
+              Cast.CastApi.removeMessageReceivedCallbacks( apiClient, casterChannel.getNamespace());
+              casterChannel = null;
             }
           } catch (IOException e) {
             Log.e(TAG, "Exception while removing channel", e);
           }
-          */
           apiClient.disconnect();
         }
         applicationStarted = false;
@@ -630,4 +689,13 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
 
   }
 
+  public class CasterChannel implements Cast.MessageReceivedCallback {
+    public String getNamespace() {
+      return "urn:x-cast:com.lkspencer.caster";
+    }
+
+    @Override public void onMessageReceived(CastDevice castDevice, String namespace, String message) {
+      Log.d(TAG, "onMessageReceived: " + message);
+    }
+  }
 }
