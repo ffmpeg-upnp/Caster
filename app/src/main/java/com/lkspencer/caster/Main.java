@@ -34,6 +34,7 @@ import com.google.android.gms.cast.CastDevice;
 import com.google.android.gms.cast.CastMediaControlIntent;
 import com.google.android.gms.cast.MediaInfo;
 import com.google.android.gms.cast.MediaMetadata;
+import com.google.android.gms.cast.MediaStatus;
 import com.google.android.gms.cast.RemoteMediaPlayer;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -54,6 +55,8 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.Locale;
+import java.util.Timer;
+import java.util.TimerTask;
 
 
 public class Main extends ActionBarActivity implements NavigationDrawerFragment.NavigationDrawerCallbacks, IVideoRepositoryCallback {
@@ -80,8 +83,9 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
   private RemoteMediaPlayer mRemoteMediaPlayer;
   private ImageButton pause;
   private LinearLayout playback;
-  //private SeekBar seekBar;
+  private SeekBar seekBar;
   private CasterChannel casterChannel;
+  private Timer progress;
   private final MediaRouter.Callback mediaRouterCallback = new MediaRouter.Callback() {
 
     @Override public void onRouteSelected(MediaRouter router, MediaRouter.RouteInfo route) {
@@ -120,8 +124,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     }
   };
   private final ResultCallback<Cast.ApplicationConnectionResult> connectionResultCallback = new ResultCallback<Cast.ApplicationConnectionResult>() {
-    {}
-    @Override public void onResult(Cast.ApplicationConnectionResult result) {
+    {} @Override public void onResult(Cast.ApplicationConnectionResult result) {
       Status status = result.getStatus();
       if (status.isSuccess()) {
         applicationStarted = true;
@@ -134,8 +137,10 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
             MediaStatus mediaStatus = mRemoteMediaPlayer.getMediaStatus();
             if (mediaStatus != null) {
               boolean isPlaying = mediaStatus.getPlayerState() == MediaStatus.PLAYER_STATE_PLAYING;
+              if (!isPlaying && progress != null) {
+              }
             }
-            */
+            //*/
           }
         });
 
@@ -171,6 +176,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
       }
     }
   };
+  private TimerTask progressUpdater;
 
 
 
@@ -279,6 +285,16 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
 
 
 
+  private void setupTimerTask() {
+    progressUpdater = new TimerTask() {
+      {} @Override public void run() {
+        if (seekBar == null || mRemoteMediaPlayer == null) return;
+
+        seekBar.setProgress((int)mRemoteMediaPlayer.getApproximateStreamPosition());
+      }
+    };
+  }
+
   public void onSectionAttached(int position) {
     VideoRepository vr = new VideoRepository(this, year, month);
     Integer[] params;
@@ -379,10 +395,13 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
             mRemoteMediaPlayer.play(apiClient).setResultCallback(new ResultCallback<RemoteMediaPlayer.MediaChannelResult>() {
               {} @Override public void onResult(RemoteMediaPlayer.MediaChannelResult result) {
                 Status status = result.getStatus();
-                if (!status.isSuccess()) {
-                  Log.w(TAG, "Unable to toggle pause: " + status.getStatusCode());
-                } else {
+                if (status.isSuccess()) {
                   paused = false;
+                  setupTimerTask();
+                  progress = new Timer("progress");
+                  progress.schedule(progressUpdater, 0, 500);
+                } else {
+                  Log.w(TAG, "Unable to toggle pause: " + status.getStatusCode());
                 }
               }
             });
@@ -392,6 +411,8 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
               {} @Override public void onResult(RemoteMediaPlayer.MediaChannelResult result) {
                 Status status = result.getStatus();
                 if (!status.isSuccess()) {
+                  progress.cancel();
+                  progressUpdater.cancel();
                   Log.w(TAG, "Unable to toggle pause: " + status.getStatusCode());
                 } else {
                   paused = true;
@@ -409,13 +430,15 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
           mRemoteMediaPlayer.stop(apiClient).setResultCallback(new ResultCallback<RemoteMediaPlayer.MediaChannelResult>() {
             {} @Override public void onResult(RemoteMediaPlayer.MediaChannelResult result) {
               Status status = result.getStatus();
-              if (!status.isSuccess()) {
-                Log.w(TAG, "Unable to stop playback: " + status.getStatusCode());
-              } else {
+              if (status.isSuccess()) {
+                progress.cancel();
+                progressUpdater.cancel();
                 playback.setVisibility(View.GONE);
                 pause.setImageResource(android.R.drawable.ic_media_play);
                 paused = true;
                 //playing = false;
+              } else {
+                Log.w(TAG, "Unable to stop playback: " + status.getStatusCode());
               }
             }
           });
@@ -428,7 +451,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
       }
     });
     playback = (LinearLayout)v.findViewById(R.id.playback);
-    SeekBar seekBar = (SeekBar)v.findViewById(R.id.seekBar);
+    seekBar = (SeekBar)v.findViewById(R.id.seekBar);
     seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
       private int progress;
 
@@ -575,7 +598,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
         String contentType = "video/mpeg";
         MediaMetadata mMediaMetadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MOVIE);
         mMediaMetadata.putString(MediaMetadata.KEY_TITLE, title);
-        //*
+        /*
         url = "http://www.ghostwhisperer.us/Music/Queen/We%20Will%20Rock%20You.mp3";
         contentType = "audio/mpeg";
         mMediaMetadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MUSIC_TRACK);
@@ -591,12 +614,18 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
             mRemoteMediaPlayer.load(apiClient, data, true).setResultCallback(new ResultCallback<RemoteMediaPlayer.MediaChannelResult>() {
               @Override public void onResult(RemoteMediaPlayer.MediaChannelResult result) {
                 if (result.getStatus().isSuccess()) {
-                  mRemoteMediaPlayer.load(apiClient, data, true);
+                  if (seekBar != null) {
+                    seekBar.setMax((int)mRemoteMediaPlayer.getMediaInfo().getStreamDuration());
+                  }
                   pause.setImageResource(android.R.drawable.ic_media_pause);
                   playback.setVisibility(View.VISIBLE);
                   //playing = true;
                   paused = false;
                   Log.d(TAG, "Media loaded successfully");
+
+                  progress = new Timer("progress");
+                  setupTimerTask();
+                  progress.schedule(progressUpdater, 0, 500);
                 }
               }
             });
