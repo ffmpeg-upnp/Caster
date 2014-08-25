@@ -28,5 +28,7 @@
     <item>November</item>
     <item>December</item>
   </string-array>
+  <string name="classes_play">Play/Pause button</string>
+  <string name="classes_stop">Stop button</string>
 
 </resources>

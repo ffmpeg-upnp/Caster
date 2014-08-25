@@ -20,7 +20,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ListView;
@@ -34,7 +33,6 @@ import com.google.android.gms.cast.CastDevice;
 import com.google.android.gms.cast.CastMediaControlIntent;
 import com.google.android.gms.cast.MediaInfo;
 import com.google.android.gms.cast.MediaMetadata;
-import com.google.android.gms.cast.MediaStatus;
 import com.google.android.gms.cast.RemoteMediaPlayer;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -423,7 +421,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
         }
       }
     });
-    Button stop = (Button)v.findViewById(R.id.stop);
+    ImageButton stop = (ImageButton)v.findViewById(R.id.stop);
     stop.setOnClickListener(new View.OnClickListener() {
       {} @Override public void onClick(View v) {
         if (mRemoteMediaPlayer != null) {

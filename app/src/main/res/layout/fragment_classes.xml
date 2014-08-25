@@ -1,7 +1,6 @@
 <LinearLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:tools="http://schemas.android.com/tools"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
         android:orientation="vertical"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent">
@@ -36,32 +35,35 @@
     tools:listitem="@android:layout/simple_list_item_1"/>
   <LinearLayout
           android:id="@+id/playback"
+          android:visibility="gone"
           android:paddingTop="5dp"
           android:paddingBottom="5dp"
           android:background="#cc000000"
           android:orientation="horizontal"
-          android:visibility="gone"
-          android:layout_marginTop="-45dp"
+          android:layout_marginTop="-65dp"
           android:layout_width="fill_parent"
-          android:layout_height="45dp">
-    <Button
+          android:layout_height="65dp">
+    <ImageButton
             android:id="@+id/stop"
-            android:text="X"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
             android:textColor="#fff"
             android:textStyle="bold"
             android:textSize="20sp"
-            android:padding="0dp"
+            android:paddingRight="10dp"
+            android:paddingLeft="10dp"
             android:layout_width="wrap_content"
-            android:layout_height="fill_parent"/>
+            android:layout_height="fill_parent"
+            android:contentDescription="@string/classes_stop"/>
     <ImageButton
             android:id="@+id/pause"
             android:src="@android:drawable/ic_media_play"
             android:layout_width="wrap_content"
-            android:layout_height="fill_parent"/>
+            android:layout_height="fill_parent"
+            android:contentDescription="@string/classes_play"/>
     <SeekBar
             android:id="@+id/seekBar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"/>
+            android:layout_gravity="center_vertical"/>
   </LinearLayout>
 </LinearLayout>
