@@ -268,7 +268,11 @@ public class NavigationDrawerFragment extends Fragment implements IVideoReposito
   }
 
   private ActionBar getActionBar() {
-    return ((ActionBarActivity) getActivity()).getSupportActionBar();
+    ActionBarActivity aba = (ActionBarActivity) getActivity();
+    if (aba != null) {
+      return aba.getSupportActionBar();
+    }
+    return null;
   }
 
   /**
