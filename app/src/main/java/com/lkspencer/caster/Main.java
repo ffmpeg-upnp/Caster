@@ -527,8 +527,16 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
 
   public void ProcessClasses(VideoRepository repository) {
     LinearLayout filters = (LinearLayout)findViewById(R.id.filters);
+    if (filters == null) {
+      Toast.makeText(this, "An error occurred processing the filters.", Toast.LENGTH_LONG).show();
+      return;
+    }
     filters.setVisibility(View.VISIBLE);
     ListView classes = (ListView) findViewById(R.id.classes);
+    if (classes == null) {
+      Toast.makeText(this, "An error occurred processing the classes.", Toast.LENGTH_LONG).show();
+      return;
+    }
     ClassAdapter ca = new ClassAdapter(
       this,
       android.R.layout.simple_list_item_1,
@@ -536,27 +544,31 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
       repository.classDataModels);
     classes.setAdapter(ca);
     classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-      {
-      }
-
-      @Override
-      public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+      {} @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         ClassDataModel c = (ClassDataModel) parent.getAdapter().getItem(position);
         Main.this.classId = c.ClassId;
         main_position = 1;
         FragmentManager fragmentManager = getSupportFragmentManager();
         fragmentManager
-                .beginTransaction()
-                .replace(R.id.container, PlaceholderFragment.newInstance(main_position))
-                .commit();
+          .beginTransaction()
+          .replace(R.id.container, PlaceholderFragment.newInstance(main_position))
+          .commit();
       }
     });
   }
 
   public void ProcessTopics(VideoRepository repository) {
     LinearLayout filters = (LinearLayout)findViewById(R.id.filters);
+    if (filters == null) {
+      Toast.makeText(this, "An error occurred processing the filters.", Toast.LENGTH_LONG).show();
+      return;
+    }
     filters.setVisibility(View.VISIBLE);
     ListView classes = (ListView) findViewById(R.id.classes);
+    if (classes == null) {
+      Toast.makeText(this, "An error occurred processing the classes.", Toast.LENGTH_LONG).show();
+      return;
+    }
     TopicAdapter ta = new TopicAdapter(
             this,
             android.R.layout.simple_list_item_1,
@@ -564,24 +576,31 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
             repository.topicDataModels);
     classes.setAdapter(ta);
     classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-      {}
-      @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+      {} @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         TopicDataModel t = (TopicDataModel) parent.getAdapter().getItem(position);
         Main.this.topicId = t.TopicId;
         main_position = 2;
         FragmentManager fragmentManager = getSupportFragmentManager();
         fragmentManager
-                .beginTransaction()
-                .replace(R.id.container, PlaceholderFragment.newInstance(main_position))
-                .commit();
+          .beginTransaction()
+          .replace(R.id.container, PlaceholderFragment.newInstance(main_position))
+          .commit();
       }
     });
   }
 
   public void ProcessVideos(VideoRepository repository) {
     LinearLayout filters = (LinearLayout)findViewById(R.id.filters);
+    if (filters == null) {
+      Toast.makeText(this, "An error occurred processing the filters.", Toast.LENGTH_LONG).show();
+      return;
+    }
     filters.setVisibility(View.GONE);
     ListView classes = (ListView) findViewById(R.id.classes);
+    if (classes == null) {
+      Toast.makeText(this, "An error occurred processing the classes.", Toast.LENGTH_LONG).show();
+      return;
+    }
     VideoAdapter va = new VideoAdapter(
             this,
             android.R.layout.simple_list_item_1,
@@ -610,7 +629,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
         if (apiClient != null && mRemoteMediaPlayer != null) {
           try {
             mRemoteMediaPlayer.load(apiClient, data, true).setResultCallback(new ResultCallback<RemoteMediaPlayer.MediaChannelResult>() {
-              @Override public void onResult(RemoteMediaPlayer.MediaChannelResult result) {
+              {} @Override public void onResult(RemoteMediaPlayer.MediaChannelResult result) {
                 if (result.getStatus().isSuccess()) {
                   if (seekBar != null) {
                     seekBar.setMax((int)mRemoteMediaPlayer.getMediaInfo().getStreamDuration());
@@ -695,6 +714,8 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     @Override public void onAttach(Activity activity) {
       super.onAttach(activity);
       this.activity = activity;
+      ((Main)activity).yearSelected = false;
+      ((Main)activity).monthSelected = false;
       ((Main)activity).onSectionAttached(getArguments().getInt(ARG_POSITION_NUMBER));
     }
 

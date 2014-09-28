@@ -93,13 +93,14 @@ public class VideoRepository extends AsyncTask<Integer[], Void, Void> {
       );
       statement.setInt(1, curriculumId);
       rs = statement.executeQuery();
-      rs.first();
+      if (!rs.first() || rs.isAfterLast()) return;
+
       do {
         ClassDataModel classDataModel = new ClassDataModel();
         classDataModel.ClassId = rs.getInt(1);
         classDataModel.Name = rs.getString(2);
         classDataModels.add(classDataModel);
-      } while (rs.next());
+      } while (rs.next() && !rs.isAfterLast());
     } catch (SQLException e) {
       e.printStackTrace();
     } catch (ClassNotFoundException e) {
