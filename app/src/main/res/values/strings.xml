@@ -30,5 +30,7 @@
   </string-array>
   <string name="classes_play">Play/Pause button</string>
   <string name="classes_stop">Stop button</string>
+  <string name="no_wifi">You must turn on WiFi and connect to the STVS or the STVS-N wireless network for Caster to work properly.</string>
+  <string name="ok">OK</string>
 
 </resources>
