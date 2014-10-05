@@ -200,6 +200,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
       AlertDialog dialog = builder.create();
       dialog.show();
     }
+    //TODO: verify that they are connected to the STVS or STVS-N wifi network
 
     mNavigationDrawerFragment = (NavigationDrawerFragment) getSupportFragmentManager().findFragmentById(R.id.navigation_drawer);
     mTitle = getTitle();
@@ -219,11 +220,16 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     this.topicId = 0;
     main_position = 0;
     // update the main content by replacing fragments
-    FragmentManager fragmentManager = getSupportFragmentManager();
-    fragmentManager
-      .beginTransaction()
-      .replace(R.id.container, PlaceholderFragment.newInstance(main_position))
-      .commit();
+    ListView classes = (ListView) findViewById(R.id.classes);
+    if (classes == null) {
+      FragmentManager fragmentManager = getSupportFragmentManager();
+      fragmentManager
+              .beginTransaction()
+              .replace(R.id.container, PlaceholderFragment.newInstance(main_position))
+              .commit();
+    } else {
+      onSectionAttached(main_position);
+    }
   }
 
   @Override public boolean onCreateOptionsMenu(Menu menu) {
@@ -319,14 +325,18 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
       case 0:
         params = new Integer[4];
         params[0] = VideoRepository.Actions.GET_CLASSES;
-        params[1] = mNavigationDrawerFragment.getCurrentCurriculumId();
+        if (mNavigationDrawerFragment != null) {
+          params[1] = mNavigationDrawerFragment.getCurrentCurriculumId();
+        }
         vr.execute(params);
         mTitle = "Classes";
         break;
       case 1:
         params = new Integer[4];
         params[0] = VideoRepository.Actions.GET_TOPICS;
-        params[1] = mNavigationDrawerFragment.getCurrentCurriculumId();
+        if (mNavigationDrawerFragment != null) {
+          params[1] = mNavigationDrawerFragment.getCurrentCurriculumId();
+        }
         params[2] = classId;
         vr.execute(params);
         mTitle = "Topics";
@@ -334,7 +344,9 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
       case 2:
         params = new Integer[4];
         params[0] = VideoRepository.Actions.GET_VIDEOS;
-        params[1] = mNavigationDrawerFragment.getCurrentCurriculumId();
+        if (mNavigationDrawerFragment != null) {
+          params[1] = mNavigationDrawerFragment.getCurrentCurriculumId();
+        }
         params[2] = classId;
         params[3] = topicId;
         vr.execute(params);
@@ -342,7 +354,9 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
         break;
     }
     ActionBar actionBar = getSupportActionBar();
-    actionBar.setTitle(mTitle);
+    if (actionBar != null) {
+      actionBar.setTitle(mTitle);
+    }
   }
 
   private void SetSpinnerSelectedValue(Spinner spinner, String value) {
@@ -567,11 +581,14 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
         ClassDataModel c = (ClassDataModel) parent.getAdapter().getItem(position);
         Main.this.classId = c.ClassId;
         main_position = 1;
+        onSectionAttached(main_position);
+        /*
         FragmentManager fragmentManager = getSupportFragmentManager();
         fragmentManager
           .beginTransaction()
           .replace(R.id.container, PlaceholderFragment.newInstance(main_position))
           .commit();
+        */
       }
     });
   }
@@ -599,11 +616,14 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
         TopicDataModel t = (TopicDataModel) parent.getAdapter().getItem(position);
         Main.this.topicId = t.TopicId;
         main_position = 2;
+        onSectionAttached(main_position);
+        /*
         FragmentManager fragmentManager = getSupportFragmentManager();
         fragmentManager
           .beginTransaction()
           .replace(R.id.container, PlaceholderFragment.newInstance(main_position))
           .commit();
+        */
       }
     });
   }
@@ -735,10 +755,26 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
       this.activity = activity;
       ((Main)activity).yearSelected = false;
       ((Main)activity).monthSelected = false;
-      ((Main)activity).onSectionAttached(getArguments().getInt(ARG_POSITION_NUMBER));
+      /*
+      if (getArguments().containsKey(ARG_POSITION_NUMBER)) {
+        int position_number = getArguments().getInt(ARG_POSITION_NUMBER);
+        ((Main)activity).onSectionAttached(position_number);
+      }
+      */
     }
 
 
+
+    /**
+     * Returns a new instance of this fragment for the given section
+     * number.
+     */
+    public static PlaceholderFragment newInstance() {
+      PlaceholderFragment fragment = new PlaceholderFragment();
+      Bundle args = new Bundle();
+      fragment.setArguments(args);
+      return fragment;
+    }
 
     /**
      * Returns a new instance of this fragment for the given section
