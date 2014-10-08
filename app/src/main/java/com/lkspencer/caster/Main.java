@@ -1,13 +1,11 @@
 package com.lkspencer.caster;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
-import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v4.widget.DrawerLayout;
@@ -17,11 +15,9 @@ import android.support.v7.app.MediaRouteActionProvider;
 import android.support.v7.media.MediaRouteSelector;
 import android.support.v7.media.MediaRouter;
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
@@ -51,13 +47,13 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
   public LinearLayout playback;
   public SeekBar seekBar;
   public MediaPlayer mediaPlayer;
+  public boolean monthSelected = false;
+  public boolean yearSelected = false;
 
   private NavigationDrawerFragment mNavigationDrawerFragment;
   private CharSequence mTitle;
   private int year;
   private int month;
-  private boolean monthSelected = false;
-  private boolean yearSelected = false;
   private VideoRepositoryCallback vrc;
 
 
@@ -110,7 +106,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
       FragmentManager fragmentManager = getSupportFragmentManager();
       fragmentManager
               .beginTransaction()
-              .replace(R.id.container, PlaceholderFragment.newInstance(main_position))
+              .replace(R.id.container, PlaceholderFragment.newInstance(main_position, this))
               .commit();
     } else {
       onSectionAttached(main_position);
@@ -318,82 +314,6 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     if (pause != null) {
       pause.setImageResource(android.R.drawable.ic_media_play);
     }
-  }
-
-
-
-  /**
-   * A placeholder fragment containing a simple view.
-   */
-  public static class PlaceholderFragment extends Fragment {
-
-    /**
-     * The fragment argument representing the section number for this
-     * fragment.
-     */
-    private static final String ARG_POSITION_NUMBER = "position_number";
-    private Activity activity;
-
-
-
-    @Override public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-      /*
-      if (savedInstanceState != null) {
-        switch (savedInstanceState.getInt(ARG_ID_NUMBER)) {
-          case 1:
-            return inflater.inflate(R.layout.fragment_classes, container, false);
-          case 2:
-            return inflater.inflate(R.layout.fragment_classes, container, false);
-        }
-      }
-      */
-      View v = inflater.inflate(R.layout.fragment_classes, container, false);
-      ((Main)this.activity).onFragmentInflated(v);
-      return v;
-    }
-
-    @Override public void onAttach(Activity activity) {
-      super.onAttach(activity);
-      this.activity = activity;
-      ((Main)activity).yearSelected = false;
-      ((Main)activity).monthSelected = false;
-      /*
-      if (getArguments().containsKey(ARG_POSITION_NUMBER)) {
-        int position_number = getArguments().getInt(ARG_POSITION_NUMBER);
-        ((Main)activity).onSectionAttached(position_number);
-      }
-      */
-    }
-
-
-
-    /**
-     * Returns a new instance of this fragment for the given section
-     * number.
-     */
-    /*
-    public static PlaceholderFragment newInstance() {
-      PlaceholderFragment fragment = new PlaceholderFragment();
-      Bundle args = new Bundle();
-      fragment.setArguments(args);
-      return fragment;
-    }
-    */
-
-    /**
-     * Returns a new instance of this fragment for the given section
-     * number.
-     */
-    public static PlaceholderFragment newInstance(int positionNumber) {
-      PlaceholderFragment fragment = new PlaceholderFragment();
-      Bundle args = new Bundle();
-      args.putInt(ARG_POSITION_NUMBER, positionNumber);
-      fragment.setArguments(args);
-      return fragment;
-    }
-
-    public PlaceholderFragment() { }
-
   }
 
 }
