@@ -282,15 +282,15 @@ public class MediaPlayer {
   private void setSelectedDevice(CastDevice device) {
     Log.d(TAG, "setSelectedDevice: " + device);
 
-    selectedDevice = device;
-
-    if (selectedDevice != null) {
+    if (device != null) {
       try {
         teardown();
+        selectedDevice = device;
         connectApiClient();
       } catch (IllegalStateException e) {
         Log.w(TAG, "Exception while connecting API client", e);
         teardown();
+        selectedDevice = device;
       }
     } else {
       teardown();
