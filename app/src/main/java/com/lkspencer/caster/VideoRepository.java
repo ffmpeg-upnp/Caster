@@ -52,7 +52,7 @@ public class VideoRepository extends AsyncTask<Integer[], Void, Void> {
     try {
       curriculumsDataModels = new ArrayList<CurriculumDataModel>();
       Class.forName("com.mysql.jdbc.Driver");
-      connection = DriverManager.getConnection("jdbc:mysql://us-cdbr-azure-west-a.cloudapp.net:3306/stvstakATbOqDhAx?user=b31446d5980666&password=786a82b3");
+      connection = DriverManager.getConnection(com.lkspencer.caster.Connection.STRING);
       statement = connection.prepareStatement(
               "select\n" +
               "  c.*\n" +
@@ -82,7 +82,7 @@ public class VideoRepository extends AsyncTask<Integer[], Void, Void> {
     try {
       Class.forName("com.mysql.jdbc.Driver");
       classDataModels = new ArrayList<ClassDataModel>();
-      connection = DriverManager.getConnection("jdbc:mysql://us-cdbr-azure-west-a.cloudapp.net:3306/stvstakATbOqDhAx?user=b31446d5980666&password=786a82b3");
+      connection = DriverManager.getConnection(com.lkspencer.caster.Connection.STRING);
       statement = connection.prepareStatement(
               "select\n" +
               "  c.*\n" +
@@ -117,7 +117,7 @@ public class VideoRepository extends AsyncTask<Integer[], Void, Void> {
     try {
       topicDataModels = new ArrayList<TopicDataModel>();
       Class.forName("com.mysql.jdbc.Driver");
-      connection = DriverManager.getConnection("jdbc:mysql://us-cdbr-azure-west-a.cloudapp.net:3306/stvstakATbOqDhAx?user=b31446d5980666&password=786a82b3");
+      connection = DriverManager.getConnection(com.lkspencer.caster.Connection.STRING);
       statement = null;
       if (curriculumId == 1) {
         statement = connection.prepareStatement(
@@ -165,7 +165,7 @@ public class VideoRepository extends AsyncTask<Integer[], Void, Void> {
     try {
       videoDataModels = new ArrayList<VideoDataModel>();
       Class.forName("com.mysql.jdbc.Driver");
-      connection = DriverManager.getConnection("jdbc:mysql://us-cdbr-azure-west-a.cloudapp.net:3306/stvstakATbOqDhAx?user=b31446d5980666&password=786a82b3");
+      connection = DriverManager.getConnection(com.lkspencer.caster.Connection.STRING);
       statement = null;
       if (curriculumId == 1) {
         statement = connection.prepareStatement(
