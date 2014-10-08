@@ -35,19 +35,11 @@ import android.widget.Toast;
 import com.google.android.gms.cast.Cast;
 import com.google.android.gms.cast.CastDevice;
 import com.google.android.gms.cast.CastMediaControlIntent;
-import com.google.android.gms.cast.MediaInfo;
-import com.google.android.gms.cast.MediaMetadata;
 import com.google.android.gms.cast.RemoteMediaPlayer;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
-import com.lkspencer.caster.adapters.ClassAdapter;
-import com.lkspencer.caster.adapters.TopicAdapter;
-import com.lkspencer.caster.adapters.VideoAdapter;
-import com.lkspencer.caster.datamodels.ClassDataModel;
-import com.lkspencer.caster.datamodels.TopicDataModel;
-import com.lkspencer.caster.datamodels.VideoDataModel;
 
 import java.io.IOException;
 import java.text.DateFormatSymbols;
@@ -61,33 +53,34 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 
-public class Main extends ActionBarActivity implements NavigationDrawerFragment.NavigationDrawerCallbacks, IVideoRepositoryCallback {
+public class Main extends ActionBarActivity implements NavigationDrawerFragment.NavigationDrawerCallbacks {
+
+  public static final String TAG = "Main";
+  public int classId;
+  public int topicId;
+  public GoogleApiClient apiClient;
+  public int main_position = 0;
+  public boolean paused = true;
+  public RemoteMediaPlayer mRemoteMediaPlayer;
+  public ImageButton pause;
+  public LinearLayout playback;
+  public SeekBar seekBar;
+  public Timer progress;
+  public TimerTask progressUpdater;
 
   private NavigationDrawerFragment mNavigationDrawerFragment;
   private CharSequence mTitle;
   private MediaRouter mediaRouter;
   private MediaRouteSelector mediaRouteSelector;
   private CastDevice selectedDevice;
-  private GoogleApiClient apiClient;
   private boolean applicationStarted;
-  public static final String TAG = "Main";
-  private int classId;
-  private int topicId;
   private int year;
   private int month;
-  private int main_position = 0;
   private static final double VOLUME_INCREMENT = 0.05;
   private boolean monthSelected = false;
   private boolean yearSelected = false;
-  //private boolean playing = false;
-  private boolean paused = true;
   private String sessionId;
-  private RemoteMediaPlayer mRemoteMediaPlayer;
-  private ImageButton pause;
-  private LinearLayout playback;
-  private SeekBar seekBar;
   private CasterChannel casterChannel;
-  private Timer progress;
   private final MediaRouter.Callback mediaRouterCallback = new MediaRouter.Callback() {
 
     @Override public void onRouteSelected(MediaRouter router, MediaRouter.RouteInfo route) {
@@ -178,7 +171,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
       }
     }
   };
-  private TimerTask progressUpdater;
+  private VideoRepositoryCallback vrc;
 
 
 
@@ -213,6 +206,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     GregorianCalendar now = new GregorianCalendar();
     month = now.get(Calendar.MONTH) + 1;
     year = now.get(Calendar.YEAR);
+    vrc = new VideoRepositoryCallback(this, null);
   }
 
   @Override public void onNavigationDrawerItemSelected(int position) {
@@ -319,7 +313,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
   }
 
   public void onSectionAttached(int position) {
-    VideoRepository vr = new VideoRepository(this, year, month);
+    VideoRepository vr = new VideoRepository(vrc, year, month);
     Integer[] params;
     switch (position) {
       case 0:
@@ -554,145 +548,6 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
       Cast.CastApi.stopApplication(apiClient);
       applicationStarted = false;
     }
-  }
-
-  public void ProcessCurriculums(VideoRepository repository) { }
-
-  public void ProcessClasses(VideoRepository repository) {
-    LinearLayout filters = (LinearLayout)findViewById(R.id.filters);
-    if (filters == null) {
-      Toast.makeText(this, "An error occurred processing the filters.", Toast.LENGTH_LONG).show();
-      return;
-    }
-    filters.setVisibility(View.VISIBLE);
-    ListView classes = (ListView) findViewById(R.id.classes);
-    if (classes == null) {
-      Toast.makeText(this, "An error occurred processing the classes.", Toast.LENGTH_LONG).show();
-      return;
-    }
-    ClassAdapter ca = new ClassAdapter(
-      this,
-      android.R.layout.simple_list_item_1,
-      android.R.id.text1,
-      repository.classDataModels);
-    classes.setAdapter(ca);
-    classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-      {} @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-        ClassDataModel c = (ClassDataModel) parent.getAdapter().getItem(position);
-        Main.this.classId = c.ClassId;
-        main_position = 1;
-        onSectionAttached(main_position);
-        /*
-        FragmentManager fragmentManager = getSupportFragmentManager();
-        fragmentManager
-          .beginTransaction()
-          .replace(R.id.container, PlaceholderFragment.newInstance(main_position))
-          .commit();
-        */
-      }
-    });
-  }
-
-  public void ProcessTopics(VideoRepository repository) {
-    LinearLayout filters = (LinearLayout)findViewById(R.id.filters);
-    if (filters == null) {
-      Toast.makeText(this, "An error occurred processing the filters.", Toast.LENGTH_LONG).show();
-      return;
-    }
-    filters.setVisibility(View.VISIBLE);
-    ListView classes = (ListView) findViewById(R.id.classes);
-    if (classes == null) {
-      Toast.makeText(this, "An error occurred processing the classes.", Toast.LENGTH_LONG).show();
-      return;
-    }
-    TopicAdapter ta = new TopicAdapter(
-            this,
-            android.R.layout.simple_list_item_1,
-            android.R.id.text1,
-            repository.topicDataModels);
-    classes.setAdapter(ta);
-    classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-      {} @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-        TopicDataModel t = (TopicDataModel) parent.getAdapter().getItem(position);
-        Main.this.topicId = t.TopicId;
-        main_position = 2;
-        onSectionAttached(main_position);
-        /*
-        FragmentManager fragmentManager = getSupportFragmentManager();
-        fragmentManager
-          .beginTransaction()
-          .replace(R.id.container, PlaceholderFragment.newInstance(main_position))
-          .commit();
-        */
-      }
-    });
-  }
-
-  public void ProcessVideos(VideoRepository repository) {
-    LinearLayout filters = (LinearLayout)findViewById(R.id.filters);
-    if (filters == null) {
-      Toast.makeText(this, "An error occurred processing the filters.", Toast.LENGTH_LONG).show();
-      return;
-    }
-    filters.setVisibility(View.GONE);
-    ListView classes = (ListView) findViewById(R.id.classes);
-    if (classes == null) {
-      Toast.makeText(this, "An error occurred processing the classes.", Toast.LENGTH_LONG).show();
-      return;
-    }
-    VideoAdapter va = new VideoAdapter(
-            this,
-            android.R.layout.simple_list_item_1,
-            android.R.id.text1,
-            repository.videoDataModels);
-    classes.setAdapter(va);
-    classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-      {} @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-        VideoDataModel v = (VideoDataModel) parent.getAdapter().getItem(position);
-        String url = v.Link;
-        String title = v.Name;
-        String contentType = "video/mpeg";
-        MediaMetadata mMediaMetadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MOVIE);
-        mMediaMetadata.putString(MediaMetadata.KEY_TITLE, title);
-        /*
-        url = "http://www.ghostwhisperer.us/Music/Queen/We%20Will%20Rock%20You.mp3";
-        contentType = "audio/mpeg";
-        mMediaMetadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MUSIC_TRACK);
-        mMediaMetadata.putString(MediaMetadata.KEY_TITLE, "We Will Rock You");
-        //*/
-        final MediaInfo data = new MediaInfo.Builder(url)
-                .setContentType(contentType)
-                .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
-                .setMetadata(mMediaMetadata)
-                .build();
-        if (apiClient != null && mRemoteMediaPlayer != null) {
-          try {
-            mRemoteMediaPlayer.load(apiClient, data, true).setResultCallback(new ResultCallback<RemoteMediaPlayer.MediaChannelResult>() {
-              {} @Override public void onResult(RemoteMediaPlayer.MediaChannelResult result) {
-                if (result.getStatus().isSuccess()) {
-                  if (seekBar != null) {
-                    seekBar.setMax((int)mRemoteMediaPlayer.getMediaInfo().getStreamDuration());
-                  }
-                  pause.setImageResource(android.R.drawable.ic_media_pause);
-                  playback.setVisibility(View.VISIBLE);
-                  //playing = true;
-                  paused = false;
-                  Log.d(TAG, "Media loaded successfully");
-
-                  progress = new Timer("progress");
-                  setupTimerTask();
-                  progress.schedule(progressUpdater, 0, 500);
-                }
-              }
-            });
-          } catch (IllegalStateException e) {
-            Log.e(TAG, "Problem occurred with media during loading", e);
-          } catch (Exception e) {
-            Log.e(TAG, "Problem opening media during loading", e);
-          }
-        }
-      }
-    });
   }
 
   private void teardown() {

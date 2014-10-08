@@ -1,16 +1,16 @@
 package com.lkspencer.caster;
 
-import android.support.v7.app.ActionBarActivity;
 import android.app.Activity;
-import android.support.v7.app.ActionBar;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.ActionBarDrawerToggle;
-import android.support.v4.view.GravityCompat;
-import android.support.v4.widget.DrawerLayout;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.support.v4.app.ActionBarDrawerToggle;
+import android.support.v4.app.Fragment;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v7.app.ActionBar;
+import android.support.v7.app.ActionBarActivity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -20,7 +20,6 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ListView;
 
-import com.lkspencer.caster.adapters.CurriculumAdapter;
 import com.lkspencer.caster.datamodels.CurriculumDataModel;
 
 import java.util.GregorianCalendar;
@@ -30,44 +29,43 @@ import java.util.GregorianCalendar;
  * See the <a href="https://developer.android.com/design/patterns/navigation-drawer.html#Interaction">
  * design guidelines</a> for a complete explanation of the behaviors implemented here.
  */
-public class NavigationDrawerFragment extends Fragment implements IVideoRepositoryCallback {
+public class NavigationDrawerFragment extends Fragment {
+
+  //Constructor
+  public NavigationDrawerFragment() { }
+
+
+
+  //Variables
+  public ListView mDrawerListView;
+  public int mCurrentSelectedPosition = 0;
 
   /**
    * Remember the position of the selected item.
    */
   private static final String STATE_SELECTED_POSITION = "selected_navigation_drawer_position";
-
   /**
    * Per the design guidelines, you should show the drawer on launch until the user manually
    * expands it. This shared preference tracks this.
    */
   private static final String PREF_USER_LEARNED_DRAWER = "navigation_drawer_learned";
-
   /**
    * A pointer to the current callbacks instance (the Activity).
    */
   private NavigationDrawerCallbacks mCallbacks;
-
   /**
    * Helper component that ties the action bar to the navigation drawer.
    */
   private ActionBarDrawerToggle mDrawerToggle;
-
   private DrawerLayout mDrawerLayout;
-  private ListView mDrawerListView;
   private View mFragmentContainerView;
-
-  private int mCurrentSelectedPosition = 0;
   private boolean mFromSavedInstanceState;
   private boolean mUserLearnedDrawer;
   private int mCurriculumId;
 
 
 
-  public NavigationDrawerFragment() { }
-
-
-
+  //Event Handlers
   @Override public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
 
@@ -94,12 +92,13 @@ public class NavigationDrawerFragment extends Fragment implements IVideoReposito
   @Override public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
     mDrawerListView = (ListView) inflater.inflate(R.layout.fragment_navigation_drawer, container, false);
     mDrawerListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-      @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+      {} @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         selectItem(position);
       }
     });
     GregorianCalendar now = new GregorianCalendar();
-    VideoRepository vr = new VideoRepository(this, now.get(GregorianCalendar.YEAR), now.get(GregorianCalendar.MONTH));
+    VideoRepositoryCallback vrc = new VideoRepositoryCallback(null, this);
+    VideoRepository vr = new VideoRepository(vrc, now.get(GregorianCalendar.YEAR), now.get(GregorianCalendar.MONTH));
     Integer[] params = new Integer[3];
     params[0] = VideoRepository.Actions.GET_CURRICULUMS;
     vr.execute(params);
@@ -148,19 +147,11 @@ public class NavigationDrawerFragment extends Fragment implements IVideoReposito
 
 
 
-  public void ProcessCurriculums(VideoRepository repository) {
-    CurriculumAdapter ca = new CurriculumAdapter(
-            getActionBar().getThemedContext(),
-            android.R.layout.simple_list_item_1,
-            android.R.id.text1,
-            repository.curriculumsDataModels);
-    mDrawerListView.setAdapter(ca);
-    mDrawerListView.setItemChecked(mCurrentSelectedPosition, true);
-  }
-  public void ProcessClasses(VideoRepository repository) { }
-  public void ProcessTopics(VideoRepository repository) { }
-  public void ProcessVideos(VideoRepository repository) { }
-
+  //Methods
+  /**
+   *
+   * @return
+   */
   public boolean isDrawerOpen() {
     return mDrawerLayout != null && mDrawerLayout.isDrawerOpen(mFragmentContainerView);
   }
@@ -192,8 +183,7 @@ public class NavigationDrawerFragment extends Fragment implements IVideoReposito
             R.string.navigation_drawer_open,  /* "open drawer" description for accessibility */
             R.string.navigation_drawer_close  /* "close drawer" description for accessibility */
     ) {
-      @Override
-      public void onDrawerClosed(View drawerView) {
+      @Override public void onDrawerClosed(View drawerView) {
         super.onDrawerClosed(drawerView);
         if (!isAdded()) {
           return;
@@ -202,8 +192,7 @@ public class NavigationDrawerFragment extends Fragment implements IVideoReposito
         getActivity().supportInvalidateOptionsMenu(); // calls onPrepareOptionsMenu()
       }
 
-      @Override
-      public void onDrawerOpened(View drawerView) {
+      @Override public void onDrawerOpened(View drawerView) {
         super.onDrawerOpened(drawerView);
         if (!isAdded()) {
           return;
@@ -230,8 +219,7 @@ public class NavigationDrawerFragment extends Fragment implements IVideoReposito
 
     // Defer code dependent on restoration of previous instance state.
     mDrawerLayout.post(new Runnable() {
-      @Override
-      public void run() {
+      {} @Override public void run() {
         mDrawerToggle.syncState();
       }
     });
@@ -239,6 +227,40 @@ public class NavigationDrawerFragment extends Fragment implements IVideoReposito
     mDrawerLayout.setDrawerListener(mDrawerToggle);
   }
 
+  /**
+   *
+   * @return
+   */
+  public ActionBar getActionBar() {
+    ActionBarActivity aba = (ActionBarActivity) getActivity();
+    if (aba != null) {
+      return aba.getSupportActionBar();
+    }
+    return null;
+  }
+
+  /**
+   * Callbacks interface that all activities using this fragment must implement.
+   */
+  public static interface NavigationDrawerCallbacks {
+    /**
+     * Called when an item in the navigation drawer is selected.
+     */
+    void onNavigationDrawerItemSelected(int position);
+  }
+
+  /**
+   * Gets the currently selected curriculum id which was selected from the slide out navigation drawer.
+   * @return returns an integer that represents the selected curriculum id.
+   */
+  public int getCurrentCurriculumId() {
+    return this.mCurriculumId;
+  }
+
+  /**
+   * Selects the item in the navigation drawer fragment based off of the position.
+   * @param position the position of the item in the navigation drawer fragment that we are selecting.
+   */
   private void selectItem(int position) {
     mCurrentSelectedPosition = position;
     if (mDrawerListView != null && mDrawerListView.getAdapter() != null) {
@@ -265,28 +287,6 @@ public class NavigationDrawerFragment extends Fragment implements IVideoReposito
     actionBar.setDisplayShowTitleEnabled(true);
     actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_STANDARD);
     actionBar.setTitle(R.string.app_name);
-  }
-
-  private ActionBar getActionBar() {
-    ActionBarActivity aba = (ActionBarActivity) getActivity();
-    if (aba != null) {
-      return aba.getSupportActionBar();
-    }
-    return null;
-  }
-
-  /**
-   * Callbacks interface that all activities using this fragment must implement.
-   */
-  public static interface NavigationDrawerCallbacks {
-    /**
-     * Called when an item in the navigation drawer is selected.
-     */
-    void onNavigationDrawerItemSelected(int position);
-  }
-
-  public int getCurrentCurriculumId() {
-    return this.mCurriculumId;
   }
 
 }
