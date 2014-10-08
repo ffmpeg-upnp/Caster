@@ -20,7 +20,6 @@ import com.lkspencer.caster.datamodels.TopicDataModel;
 import com.lkspencer.caster.datamodels.VideoDataModel;
 
 import java.util.Timer;
-import java.util.TimerTask;
 
 /**
  * Created by Kirk on 10/7/2014.
@@ -160,23 +159,23 @@ public class VideoRepositoryCallback implements IVideoRepositoryCallback {
                 .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
                 .setMetadata(mMediaMetadata)
                 .build();
-        if (m.apiClient != null && m.mRemoteMediaPlayer != null) {
+        if (m.mediaPlayer.apiClient != null && m.mediaPlayer.mRemoteMediaPlayer != null) {
           try {
-            m.mRemoteMediaPlayer.load(m.apiClient, data, true).setResultCallback(new ResultCallback<RemoteMediaPlayer.MediaChannelResult>() {
+            m.mediaPlayer.mRemoteMediaPlayer.load(m.mediaPlayer.apiClient, data, true).setResultCallback(new ResultCallback<RemoteMediaPlayer.MediaChannelResult>() {
               {} @Override public void onResult(RemoteMediaPlayer.MediaChannelResult result) {
                 if (result.getStatus().isSuccess()) {
                   if (m.seekBar != null) {
-                    m.seekBar.setMax((int)m.mRemoteMediaPlayer.getMediaInfo().getStreamDuration());
+                    m.seekBar.setMax((int)m.mediaPlayer.mRemoteMediaPlayer.getMediaInfo().getStreamDuration());
                   }
                   m.pause.setImageResource(android.R.drawable.ic_media_pause);
                   m.playback.setVisibility(View.VISIBLE);
                   //playing = true;
-                  m.paused = false;
+                  m.mediaPlayer.paused = false;
                   Log.d(Main.TAG, "Media loaded successfully");
 
-                  m.progress = new Timer("progress");
-                  setupTimerTask();
-                  m.progress.schedule(m.progressUpdater, 0, 500);
+                  m.mediaPlayer.progress = new Timer("progress");
+                  m.mediaPlayer.setupTimerTask(m.seekBar);
+                  m.mediaPlayer.progress.schedule(m.mediaPlayer.progressUpdater, 0, 500);
                 }
               }
             });
@@ -188,19 +187,6 @@ public class VideoRepositoryCallback implements IVideoRepositoryCallback {
         }
       }
     });
-  }
-
-
-
-  //Methods
-  private void setupTimerTask() {
-    m.progressUpdater = new TimerTask() {
-      {} @Override public void run() {
-        if (m.seekBar == null || m.mRemoteMediaPlayer == null) return;
-
-        m.seekBar.setProgress((int)m.mRemoteMediaPlayer.getApproximateStreamPosition());
-      }
-    };
   }
 
 }

@@ -16,7 +16,6 @@ import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.MediaRouteActionProvider;
 import android.support.v7.media.MediaRouteSelector;
 import android.support.v7.media.MediaRouter;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -30,18 +29,9 @@ import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.SpinnerAdapter;
-import android.widget.Toast;
 
-import com.google.android.gms.cast.Cast;
-import com.google.android.gms.cast.CastDevice;
 import com.google.android.gms.cast.CastMediaControlIntent;
-import com.google.android.gms.cast.RemoteMediaPlayer;
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.ResultCallback;
-import com.google.android.gms.common.api.Status;
 
-import java.io.IOException;
 import java.text.DateFormatSymbols;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -49,128 +39,25 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.Locale;
-import java.util.Timer;
-import java.util.TimerTask;
 
 
-public class Main extends ActionBarActivity implements NavigationDrawerFragment.NavigationDrawerCallbacks {
+public class Main extends ActionBarActivity implements NavigationDrawerFragment.INavigationDrawerCallbacks {
 
   public static final String TAG = "Main";
   public int classId;
   public int topicId;
-  public GoogleApiClient apiClient;
   public int main_position = 0;
-  public boolean paused = true;
-  public RemoteMediaPlayer mRemoteMediaPlayer;
   public ImageButton pause;
   public LinearLayout playback;
   public SeekBar seekBar;
-  public Timer progress;
-  public TimerTask progressUpdater;
+  public MediaPlayer mediaPlayer;
 
   private NavigationDrawerFragment mNavigationDrawerFragment;
   private CharSequence mTitle;
-  private MediaRouter mediaRouter;
-  private MediaRouteSelector mediaRouteSelector;
-  private CastDevice selectedDevice;
-  private boolean applicationStarted;
   private int year;
   private int month;
-  private static final double VOLUME_INCREMENT = 0.05;
   private boolean monthSelected = false;
   private boolean yearSelected = false;
-  private String sessionId;
-  private CasterChannel casterChannel;
-  private final MediaRouter.Callback mediaRouterCallback = new MediaRouter.Callback() {
-
-    @Override public void onRouteSelected(MediaRouter router, MediaRouter.RouteInfo route) {
-      CastDevice device = CastDevice.getFromBundle(route.getExtras());
-      setSelectedDevice(device);
-    }
-
-    @Override public void onRouteUnselected(MediaRouter router, MediaRouter.RouteInfo route) {
-      teardown();
-      setSelectedDevice(null);
-    }
-
-  };
-  private final Cast.Listener castClientListener = new Cast.Listener() {
-    @Override public void onApplicationDisconnected(int statusCode) { }
-
-    @Override public void onVolumeChanged() { }
-  };
-  private final GoogleApiClient.ConnectionCallbacks connectionCallback = new GoogleApiClient.ConnectionCallbacks() {
-    @Override public void onConnected(Bundle bundle) {
-      try {
-        Cast.CastApi.launchApplication(apiClient, CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID, false).setResultCallback(connectionResultCallback);
-      } catch (Exception e) {
-        Log.e(TAG, "Failed to launch application", e);
-      }
-    }
-
-    @Override public void onConnectionSuspended(int i) { }
-
-  };
-  private final GoogleApiClient.OnConnectionFailedListener connectionFailedListener = new GoogleApiClient.OnConnectionFailedListener() {
-    {}
-    @Override public void onConnectionFailed(ConnectionResult connectionResult) {
-      Toast.makeText(Main.this, "Failed to connect " + connectionResult.toString(), Toast.LENGTH_SHORT).show();
-      setSelectedDevice(null);
-    }
-  };
-  private final ResultCallback<Cast.ApplicationConnectionResult> connectionResultCallback = new ResultCallback<Cast.ApplicationConnectionResult>() {
-    {} @Override public void onResult(Cast.ApplicationConnectionResult result) {
-      Status status = result.getStatus();
-      if (status.isSuccess()) {
-        applicationStarted = true;
-        sessionId = result.getSessionId();
-
-        mRemoteMediaPlayer = new RemoteMediaPlayer();
-        mRemoteMediaPlayer.setOnStatusUpdatedListener(new RemoteMediaPlayer.OnStatusUpdatedListener() {
-          {} @Override public void onStatusUpdated() {
-            /*
-            MediaStatus mediaStatus = mRemoteMediaPlayer.getMediaStatus();
-            if (mediaStatus != null) {
-              boolean isPlaying = mediaStatus.getPlayerState() == MediaStatus.PLAYER_STATE_PLAYING;
-              if (!isPlaying && progress != null) {
-              }
-            }
-            //*/
-          }
-        });
-
-        mRemoteMediaPlayer.setOnMetadataUpdatedListener(new RemoteMediaPlayer.OnMetadataUpdatedListener() {
-          {} @Override public void onMetadataUpdated() {
-            /*
-            MediaInfo mediaInfo = mRemoteMediaPlayer.getMediaInfo();
-            if (mediaInfo != null) {
-              MediaMetadata metadata = mediaInfo.getMetadata();
-            }
-            */
-          }
-        });
-
-        try {
-          Cast.CastApi.setMessageReceivedCallbacks(apiClient, mRemoteMediaPlayer.getNamespace(), mRemoteMediaPlayer);
-        } catch (IOException e) {
-          Log.e(TAG, "Exception while creating media channel", e);
-        }
-        mRemoteMediaPlayer
-          .requestStatus(apiClient)
-          .setResultCallback(new ResultCallback<RemoteMediaPlayer.MediaChannelResult>() {
-            {} @Override public void onResult(RemoteMediaPlayer.MediaChannelResult result) {
-                if (result.getStatus().isSuccess()) {
-                  Log.e(TAG, "The status has been requested!");
-                } else {
-                  Log.e(TAG, "Failed to request status.");
-                }
-              }
-            });
-      } else {
-        teardown();
-      }
-    }
-  };
   private VideoRepositoryCallback vrc;
 
 
@@ -179,6 +66,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
+    mediaPlayer = new MediaPlayer(this);
     WifiManager wifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
     if (!wifi.isWifiEnabled()){
       AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -186,7 +74,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
       builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
         {} @Override public void onClick(DialogInterface dialog, int which) {
           dialog.dismiss();
-          stopApplication();
+          mediaPlayer.teardown();
           Main.this.finish();
         }
       });
@@ -195,14 +83,17 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     }
     //TODO: verify that they are connected to the STVS or STVS-N wifi network
 
-    mNavigationDrawerFragment = (NavigationDrawerFragment) getSupportFragmentManager().findFragmentById(R.id.navigation_drawer);
-    mTitle = getTitle();
-
     // Set up the drawer.
+    mNavigationDrawerFragment = (NavigationDrawerFragment) getSupportFragmentManager().findFragmentById(R.id.navigation_drawer);
     mNavigationDrawerFragment.setUp(R.id.navigation_drawer, (DrawerLayout) findViewById(R.id.drawer_layout));
 
-    mediaRouter = MediaRouter.getInstance(getApplicationContext());
-    mediaRouteSelector = new MediaRouteSelector.Builder().addControlCategory(CastMediaControlIntent.categoryForCast(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID)).build();
+    mTitle = getTitle();
+
+    mediaPlayer.mediaRouter = MediaRouter.getInstance(getApplicationContext());
+    mediaPlayer.mediaRouteSelector = new MediaRouteSelector
+            .Builder()
+            .addControlCategory(CastMediaControlIntent.categoryForCast(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID))
+            .build();
     GregorianCalendar now = new GregorianCalendar();
     month = now.get(Calendar.MONTH) + 1;
     year = now.get(Calendar.YEAR);
@@ -234,7 +125,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
       getMenuInflater().inflate(R.menu.main, menu);
       MenuItem mediaRouteMenuItem = menu.findItem(R.id.media_route_menu_item);
       MediaRouteActionProvider mediaRouteActionProvider = (MediaRouteActionProvider) MenuItemCompat.getActionProvider(mediaRouteMenuItem);
-      mediaRouteActionProvider.setRouteSelector(mediaRouteSelector);
+      mediaRouteActionProvider.setRouteSelector(mediaPlayer.mediaRouteSelector);
       restoreActionBar();
       return true;
     }
@@ -250,12 +141,12 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
 
   @Override protected void onStart() {
     super.onStart();
-    mediaRouter.addCallback(mediaRouteSelector, mediaRouterCallback, MediaRouter.CALLBACK_FLAG_PERFORM_ACTIVE_SCAN);
+    mediaPlayer.start();
   }
 
   @Override protected void onStop() {
     //setSelectedDevice(null);
-    mediaRouter.removeCallback(mediaRouterCallback);
+    mediaPlayer.stop();
     super.onStop();
   }
 
@@ -265,34 +156,12 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     switch (keyCode) {
       case KeyEvent.KEYCODE_VOLUME_UP:
         if (action == KeyEvent.ACTION_DOWN) {
-          if (mRemoteMediaPlayer != null) {
-            double currentVolume = Cast.CastApi.getVolume(apiClient);
-            if (currentVolume < 1.0) {
-              try {
-                Cast.CastApi.setVolume(apiClient, Math.min(currentVolume + VOLUME_INCREMENT, 1.0));
-              } catch (Exception e) {
-                Log.e(TAG, "unable to set volume", e);
-              }
-            }
-          } else {
-            Log.e(TAG, "dispatchKeyEvent - volume up");
-          }
+          mediaPlayer.increaseVolume();
         }
         return true;
       case KeyEvent.KEYCODE_VOLUME_DOWN:
         if (action == KeyEvent.ACTION_DOWN) {
-          if (mRemoteMediaPlayer != null) {
-            double currentVolume = Cast.CastApi.getVolume(apiClient);
-            if (currentVolume > 0.0) {
-              try {
-                Cast.CastApi.setVolume(apiClient, Math.max(currentVolume - VOLUME_INCREMENT, 0.0));
-              } catch (Exception e) {
-                Log.e(TAG, "unable to set volume", e);
-              }
-            }
-          } else {
-            Log.e(TAG, "dispatchKeyEvent - volume down");
-          }
+          mediaPlayer.decreaseVolume();
         }
         return true;
       default:
@@ -301,16 +170,6 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
   }
 
 
-
-  private void setupTimerTask() {
-    progressUpdater = new TimerTask() {
-      {} @Override public void run() {
-        if (seekBar == null || mRemoteMediaPlayer == null) return;
-
-        seekBar.setProgress((int)mRemoteMediaPlayer.getApproximateStreamPosition());
-      }
-    };
-  }
 
   public void onSectionAttached(int position) {
     VideoRepository vr = new VideoRepository(vrc, year, month);
@@ -414,65 +273,18 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     pause = (ImageButton)v.findViewById(R.id.pause);
     pause.setOnClickListener(new View.OnClickListener() {
       {} @Override public void onClick(View v) {
-        if (mRemoteMediaPlayer != null /*&& mRemoteMediaPlayer.getStreamDuration() > 0 && mRemoteMediaPlayer.getMediaStatus() != null*/) {
-          if (paused) {
-            pause.setImageResource(android.R.drawable.ic_media_pause);
-            mRemoteMediaPlayer.play(apiClient).setResultCallback(new ResultCallback<RemoteMediaPlayer.MediaChannelResult>() {
-              {} @Override public void onResult(RemoteMediaPlayer.MediaChannelResult result) {
-                Status status = result.getStatus();
-                if (status.isSuccess()) {
-                  paused = false;
-                  setupTimerTask();
-                  progress = new Timer("progress");
-                  progress.schedule(progressUpdater, 0, 500);
-                } else {
-                  Log.w(TAG, "Unable to toggle pause: " + status.getStatusCode());
-                }
-              }
-            });
-          } else {
-            pause.setImageResource(android.R.drawable.ic_media_play);
-            mRemoteMediaPlayer.pause(apiClient).setResultCallback(new ResultCallback<RemoteMediaPlayer.MediaChannelResult>() {
-              {} @Override public void onResult(RemoteMediaPlayer.MediaChannelResult result) {
-                Status status = result.getStatus();
-                if (!status.isSuccess()) {
-                  progress.cancel();
-                  progressUpdater.cancel();
-                  Log.w(TAG, "Unable to toggle pause: " + status.getStatusCode());
-                } else {
-                  paused = true;
-                }
-              }
-            });
-          }
+        if (mediaPlayer.paused) {
+          pause.setImageResource(android.R.drawable.ic_media_pause);
+        } else {
+          pause.setImageResource(android.R.drawable.ic_media_play);
         }
+        mediaPlayer.pausePlayback(seekBar);
       }
     });
     ImageButton stop = (ImageButton)v.findViewById(R.id.stop);
     stop.setOnClickListener(new View.OnClickListener() {
       {} @Override public void onClick(View v) {
-        if (mRemoteMediaPlayer != null) {
-          mRemoteMediaPlayer.stop(apiClient).setResultCallback(new ResultCallback<RemoteMediaPlayer.MediaChannelResult>() {
-            {} @Override public void onResult(RemoteMediaPlayer.MediaChannelResult result) {
-              Status status = result.getStatus();
-              if (status.isSuccess()) {
-                progress.cancel();
-                progressUpdater.cancel();
-                playback.setVisibility(View.GONE);
-                pause.setImageResource(android.R.drawable.ic_media_play);
-                paused = true;
-                //playing = false;
-              } else {
-                Log.w(TAG, "Unable to stop playback: " + status.getStatusCode());
-              }
-            }
-          });
-        } else {
-          playback.setVisibility(View.GONE);
-          pause.setImageResource(android.R.drawable.ic_media_play);
-          paused = true;
-          //playing = false;
-        }
+        mediaPlayer.stopPlayback(Main.this);
       }
     });
     playback = (LinearLayout)v.findViewById(R.id.playback);
@@ -487,9 +299,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
       @Override public void onStartTrackingTouch(SeekBar seekBar) { }
 
       @Override public void onStopTrackingTouch(SeekBar seekBar) {
-        if (mRemoteMediaPlayer != null) {
-          mRemoteMediaPlayer.seek(apiClient, progress);
-        }
+        mediaPlayer.seekPlayback(progress);
       }
     });
   }
@@ -501,78 +311,15 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     actionBar.setTitle(mTitle);
   }
 
-  private void setSelectedDevice(CastDevice device) {
-    Log.d(TAG, "setSelectedDevice: " + device);
-
-    selectedDevice = device;
-
-    if (selectedDevice != null) {
-      try {
-        stopApplication();
-        disconnectApiClient();
-        connectApiClient();
-      } catch (IllegalStateException e) {
-        Log.w(TAG, "Exception while connecting API client", e);
-        disconnectApiClient();
-      }
-    } else {
-      if (apiClient != null) {
-        disconnectApiClient();
-      }
-
-      mediaRouter.selectRoute(mediaRouter.getDefaultRoute());
+  public void hidePlayback() {
+    if (playback != null) {
+      playback.setVisibility(View.GONE);
+    }
+    if (pause != null) {
+      pause.setImageResource(android.R.drawable.ic_media_play);
     }
   }
 
-  private void connectApiClient() {
-    Cast.CastOptions apiOptions = Cast.CastOptions.builder(selectedDevice, castClientListener).build();
-    apiClient = new GoogleApiClient.Builder(this)
-            .addApi(Cast.API, apiOptions)
-            .addConnectionCallbacks(connectionCallback)
-            .addOnConnectionFailedListener(connectionFailedListener)
-            .build();
-    apiClient.connect();
-  }
-
-  private void disconnectApiClient() {
-    if (apiClient != null) {
-      apiClient.disconnect();
-      apiClient = null;
-    }
-  }
-
-  private void stopApplication() {
-    if (apiClient == null) return;
-
-    if (applicationStarted) {
-      Cast.CastApi.stopApplication(apiClient);
-      applicationStarted = false;
-    }
-  }
-
-  private void teardown() {
-    Log.d(TAG, "teardown");
-    if (apiClient != null) {
-      if (applicationStarted) {
-        if (apiClient.isConnected()) {
-          Cast.CastApi.stopApplication(apiClient, sessionId);
-          try {
-            if (casterChannel != null) {
-              Cast.CastApi.removeMessageReceivedCallbacks( apiClient, casterChannel.getNamespace());
-              casterChannel = null;
-            }
-          } catch (IOException e) {
-            Log.e(TAG, "Exception while removing channel", e);
-          }
-          apiClient.disconnect();
-        }
-        applicationStarted = false;
-      }
-      apiClient = null;
-    }
-    selectedDevice = null;
-    mRemoteMediaPlayer = null;
-  }
 
 
   /**
@@ -649,13 +396,4 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
 
   }
 
-  public class CasterChannel implements Cast.MessageReceivedCallback {
-    public String getNamespace() {
-      return "urn:x-cast:com.lkspencer.caster";
-    }
-
-    @Override public void onMessageReceived(CastDevice castDevice, String namespace, String message) {
-      Log.d(TAG, "onMessageReceived: " + message);
-    }
-  }
 }
