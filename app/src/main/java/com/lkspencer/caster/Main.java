@@ -49,6 +49,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
   public MediaPlayer mediaPlayer;
   public boolean monthSelected = false;
   public boolean yearSelected = false;
+  public boolean INEEDTOBEDELETED;
 
   private NavigationDrawerFragment mNavigationDrawerFragment;
   private CharSequence mTitle;
