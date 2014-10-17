@@ -3,3 +3,5 @@
 /.idea/workspace.xml
 .DS_Store
 /build
+
+app/src/main/java/com/lkspencer/caster/Connection.java
