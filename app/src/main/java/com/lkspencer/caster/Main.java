@@ -1,16 +1,20 @@
 package com.lkspencer.caster;
 
 import android.app.AlertDialog;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBar;
-import android.support.v7.app.ActionBarActivity;
+import android.support.v7.app.AppCompatActivity;
 import android.support.v7.app.MediaRouteActionProvider;
 import android.support.v7.media.MediaRouteSelector;
 import android.support.v7.media.MediaRouter;
@@ -25,8 +29,15 @@ import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.SpinnerAdapter;
+import android.widget.Toast;
 
 import com.google.android.gms.cast.CastMediaControlIntent;
+import com.lkspencer.caster.upnp.BrowserRegistryListener;
+
+import org.fourthline.cling.android.AndroidUpnpService;
+import org.fourthline.cling.android.AndroidUpnpServiceImpl;
+import org.fourthline.cling.android.FixedAndroidLogHandler;
+import org.fourthline.cling.model.meta.Device;
 
 import java.text.DateFormatSymbols;
 import java.text.ParseException;
@@ -37,8 +48,7 @@ import java.util.GregorianCalendar;
 import java.util.Locale;
 
 
-public class Main extends ActionBarActivity implements NavigationDrawerFragment.INavigationDrawerCallbacks {
-
+public class Main extends AppCompatActivity implements NavigationDrawerFragment.INavigationDrawerCallbacks {
   public static final String TAG = "Main";
   public int classId;
   public int topicId;
@@ -49,7 +59,6 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
   public MediaPlayer mediaPlayer;
   public boolean monthSelected = false;
   public boolean yearSelected = false;
-  public boolean INEEDTOBEDELETED;
 
   private NavigationDrawerFragment mNavigationDrawerFragment;
   private CharSequence mTitle;
@@ -57,11 +66,46 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
   private int month;
   private VideoRepositoryCallback vrc;
 
+  private BrowserRegistryListener registryListener = new BrowserRegistryListener(this);
+  private AndroidUpnpService upnpService;
+  private ServiceConnection serviceConnection = new ServiceConnection() {
 
+    public void onServiceConnected(ComponentName className, IBinder service) {
+      upnpService = (AndroidUpnpService) service;
+
+      // Clear the list
+      //listAdapter.clear();
+
+      // Get ready for future device advertisements
+      upnpService.getRegistry().addListener(registryListener);
+
+      // Now add all devices to the list we already know about
+      Toast.makeText(Main.this, "Connected", Toast.LENGTH_LONG).show();
+      for (Device device : upnpService.getRegistry().getDevices()) {
+        registryListener.deviceAdded(device);
+      }
+
+      // Search asynchronously for all devices, they will respond soon
+      upnpService.getControlPoint().search();
+    }
+
+    public void onServiceDisconnected(ComponentName className) {
+      upnpService = null;
+    }
+  };
 
   @Override protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
+
+    //*
+    org.seamless.util.logging.LoggingUtil.resetRootHandler(new FixedAndroidLogHandler());
+    getApplicationContext().bindService(
+        new Intent(this, AndroidUpnpServiceImpl.class),
+        serviceConnection,
+        Context.BIND_AUTO_CREATE
+    );
+    //*/
 
     mediaPlayer = new MediaPlayer(this);
     WifiManager wifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
@@ -166,6 +210,14 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     }
   }
 
+  @Override protected void onDestroy() {
+    super.onDestroy();
+    if (upnpService != null) {
+      upnpService.getRegistry().removeListener(registryListener);
+    }
+    // This will stop the UPnP service if nobody else is bound to it
+    getApplicationContext().unbindService(serviceConnection);
+  }
 
 
   public void onSectionAttached(int position) {
@@ -289,13 +341,17 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
       private int progress;
 
-      @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+      @Override
+      public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
         this.progress = progress;
       }
 
-      @Override public void onStartTrackingTouch(SeekBar seekBar) { }
+      @Override
+      public void onStartTrackingTouch(SeekBar seekBar) {
+      }
 
-      @Override public void onStopTrackingTouch(SeekBar seekBar) {
+      @Override
+      public void onStopTrackingTouch(SeekBar seekBar) {
         mediaPlayer.seekPlayback(progress);
       }
     });
@@ -303,9 +359,11 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
 
   public void restoreActionBar() {
     ActionBar actionBar = getSupportActionBar();
-    actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_STANDARD);
-    actionBar.setDisplayShowTitleEnabled(true);
-    actionBar.setTitle(mTitle);
+    if (actionBar != null) {
+      //actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_STANDARD);
+      actionBar.setDisplayShowTitleEnabled(true);
+      actionBar.setTitle(mTitle);
+    }
   }
 
   public void hidePlayback() {

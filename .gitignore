@@ -1,4 +1,11 @@
+bin/*
+gen/*
+libs/*
 .gradle
+.gradle/*
+.idea/*
+build/*
+app/build/*
 /local.properties
 /.idea/workspace.xml
 .DS_Store
