@@ -128,8 +128,8 @@
     <orderEntry type="library" exported="" name="play-services-appstate-7.0.0" level="project" />
     <orderEntry type="library" exported="" name="slf4j-jdk14-1.7.12" level="project" />
     <orderEntry type="library" exported="" name="play-services-identity-7.0.0" level="project" />
-    <orderEntry type="library" exported="" name="jetty-continuation-8.1.12.v20130726" level="project" />
     <orderEntry type="library" exported="" name="slf4j-api-1.7.12" level="project" />
+    <orderEntry type="library" exported="" name="jetty-continuation-8.1.12.v20130726" level="project" />
     <orderEntry type="library" exported="" name="play-services-games-7.0.0" level="project" />
     <orderEntry type="library" exported="" name="play-services-wallet-7.0.0" level="project" />
   </component>

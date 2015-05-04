@@ -74,7 +74,7 @@ public class BrowserRegistryListener implements RegistryListener {
             URL url = rdi.getDescriptorURL();
             if (url != null) {
               String address = url.getHost();
-              if (address != null && address.contains("192.168.1.2")) {
+              if (address != null) {
                 Toast.makeText(a, rd.getDetails().getFriendlyName() + " - port:" + url.getPort(), Toast.LENGTH_LONG).show();
               }
             }
