@@ -1,6 +1,6 @@
 /build
 /libs
-/.gitignore
 /*.apk
 /*.xcf
 /src/main/java/com/lkspencer/caster/Connection.java
+/*.iml

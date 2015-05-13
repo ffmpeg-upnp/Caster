@@ -18,6 +18,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.app.MediaRouteActionProvider;
 import android.support.v7.media.MediaRouteSelector;
 import android.support.v7.media.MediaRouter;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -32,7 +33,8 @@ import android.widget.SpinnerAdapter;
 import android.widget.Toast;
 
 import com.google.android.gms.cast.CastMediaControlIntent;
-import com.lkspencer.caster.upnp.BrowserRegistryListener;
+import com.lkspencer.caster.upnp.BrowseRegistryListener;
+import com.lkspencer.caster.upnp.DeviceDisplay;
 
 import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.android.AndroidUpnpServiceImpl;
@@ -42,6 +44,7 @@ import org.fourthline.cling.model.meta.Device;
 import java.text.DateFormatSymbols;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -65,23 +68,25 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
   private int year;
   private int month;
   private VideoRepositoryCallback vrc;
+  private ArrayList<DeviceDisplay> devices = new ArrayList<>();
 
-  private BrowserRegistryListener registryListener = new BrowserRegistryListener(this);
+  private BrowseRegistryListener registryListener;
   private AndroidUpnpService upnpService;
   private ServiceConnection serviceConnection = new ServiceConnection() {
-
     public void onServiceConnected(ComponentName className, IBinder service) {
+      //Log.i("asdf", "onServiceConnected: connected to upnp service.");
       upnpService = (AndroidUpnpService) service;
 
       // Clear the list
-      //listAdapter.clear();
+      devices.clear();
 
       // Get ready for future device advertisements
+      registryListener = new BrowseRegistryListener(upnpService, Main.this, devices);
       upnpService.getRegistry().addListener(registryListener);
 
       // Now add all devices to the list we already know about
-      Toast.makeText(Main.this, "Connected", Toast.LENGTH_LONG).show();
       for (Device device : upnpService.getRegistry().getDevices()) {
+        //Log.i("asdf", "onServiceConnected: adding device: " + device.getDetails().getFriendlyName());
         registryListener.deviceAdded(device);
       }
 
@@ -98,7 +103,7 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
-    //*
+    //* setup the UPnP service to find available media devices
     org.seamless.util.logging.LoggingUtil.resetRootHandler(new FixedAndroidLogHandler());
     getApplicationContext().bindService(
         new Intent(this, AndroidUpnpServiceImpl.class),
