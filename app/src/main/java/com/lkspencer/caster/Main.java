@@ -33,13 +33,22 @@ import android.widget.SpinnerAdapter;
 import android.widget.Toast;
 
 import com.google.android.gms.cast.CastMediaControlIntent;
+import com.lkspencer.caster.adapters.DeviceAdapter;
 import com.lkspencer.caster.upnp.BrowseRegistryListener;
 import com.lkspencer.caster.upnp.DeviceDisplay;
 
 import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.android.AndroidUpnpServiceImpl;
 import org.fourthline.cling.android.FixedAndroidLogHandler;
+import org.fourthline.cling.model.action.ActionInvocation;
+import org.fourthline.cling.model.message.UpnpResponse;
 import org.fourthline.cling.model.meta.Device;
+import org.fourthline.cling.model.meta.Service;
+import org.fourthline.cling.support.contentdirectory.callback.Browse;
+import org.fourthline.cling.support.model.BrowseFlag;
+import org.fourthline.cling.support.model.DIDLContent;
+import org.fourthline.cling.support.model.container.Container;
+import org.fourthline.cling.support.model.item.Item;
 
 import java.text.DateFormatSymbols;
 import java.text.ParseException;
@@ -69,26 +78,74 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
   private int month;
   private VideoRepositoryCallback vrc;
   private ArrayList<DeviceDisplay> devices = new ArrayList<>();
+  private DeviceAdapter deviceAdapter;
 
   private BrowseRegistryListener registryListener;
   private AndroidUpnpService upnpService;
   private ServiceConnection serviceConnection = new ServiceConnection() {
     public void onServiceConnected(ComponentName className, IBinder service) {
-      //Log.i("asdf", "onServiceConnected: connected to upnp service.");
       upnpService = (AndroidUpnpService) service;
 
       // Clear the list
       devices.clear();
+      deviceAdapter = new DeviceAdapter(
+          Main.this,
+          android.R.layout.simple_list_item_1,
+          android.R.id.text1,
+          devices);
 
       // Get ready for future device advertisements
-      registryListener = new BrowseRegistryListener(upnpService, Main.this, devices);
+      registryListener = new BrowseRegistryListener(upnpService, Main.this, devices, deviceAdapter);
       upnpService.getRegistry().addListener(registryListener);
 
       // Now add all devices to the list we already know about
       for (Device device : upnpService.getRegistry().getDevices()) {
-        //Log.i("asdf", "onServiceConnected: adding device: " + device.getDetails().getFriendlyName());
         registryListener.deviceAdded(device);
       }
+
+
+      ListView classes = (ListView)findViewById(R.id.classes);
+      classes.setAdapter(deviceAdapter);
+      classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        {} @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+          DeviceDisplay dd = (DeviceDisplay) parent.getAdapter().getItem(position);
+          deviceAdapter.clear();
+          final Device device = dd.getDevice();
+          Service[] services = device.getServices();
+          for (final Service service : services) {
+            if ("ContentDirectory".equalsIgnoreCase(service.getServiceId().getId()) && service.hasActions()) {
+              try {
+                Browse b = new Browse(service, dd.getId(), BrowseFlag.DIRECT_CHILDREN) {
+                  @Override public void received(ActionInvocation actionInvocation, DIDLContent didl) {
+                    for (Container container : didl.getContainers()) {
+                      String title = container.getTitle();
+                      if (title != null) {
+                        DeviceDisplay d = new DeviceDisplay(device, container.getId(), title);
+                        deviceAdapter.add(d);
+                      }
+                    }
+                    for (Item item : didl.getItems()) {
+                      String title = item.getTitle();
+                      if (title != null) {
+                        DeviceDisplay d = new DeviceDisplay(device, "2", "FILE: " + title);
+                        deviceAdapter.add(d);
+                      }
+                    }
+                  }
+                  @Override public void updateStatus(Status status) { }
+                  @Override public void failure(ActionInvocation invocation, UpnpResponse operation, String defaultMsg) { }
+                };
+                b.setControlPoint(upnpService.getControlPoint());
+                b.run();
+              } catch (Exception ex) {
+                Log.e("asdf", ex.getMessage());
+              }
+            }
+          }
+          Toast.makeText(Main.this, dd.getDevice().getDetails().getFriendlyName() + ": " + dd.getId(), Toast.LENGTH_SHORT).show();
+        }
+      });
+
 
       // Search asynchronously for all devices, they will respond soon
       upnpService.getControlPoint().search();

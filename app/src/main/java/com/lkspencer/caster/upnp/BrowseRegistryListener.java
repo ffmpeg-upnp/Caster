@@ -2,7 +2,8 @@ package com.lkspencer.caster.upnp;
 
 import android.app.Activity;
 import android.util.Log;
-import android.widget.Toast;
+
+import com.lkspencer.caster.adapters.DeviceAdapter;
 
 import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.model.action.ActionInvocation;
@@ -17,16 +18,16 @@ import org.fourthline.cling.support.contentdirectory.callback.Browse;
 import org.fourthline.cling.support.model.BrowseFlag;
 import org.fourthline.cling.support.model.DIDLContent;
 import org.fourthline.cling.support.model.container.Container;
-import org.fourthline.cling.support.model.item.Item;
 
 import java.util.ArrayList;
 
 public class BrowseRegistryListener implements RegistryListener {
 
-  public BrowseRegistryListener(AndroidUpnpService upnpService, Activity a, ArrayList<DeviceDisplay> devices) {
+  public BrowseRegistryListener(AndroidUpnpService upnpService, Activity a, ArrayList<DeviceDisplay> devices, DeviceAdapter da) {
     this.a = a;
     this.devices = devices;
     this.upnpService = upnpService;
+    this.da = da;
   }
 
 
@@ -34,21 +35,15 @@ public class BrowseRegistryListener implements RegistryListener {
   private Activity a;
   private ArrayList<DeviceDisplay> devices;
   private AndroidUpnpService upnpService;
+  private DeviceAdapter da;
 
 
 
   /* Discovery performance optimization for very slow Android devices! */
   @Override public void remoteDeviceDiscoveryStarted(Registry registry, RemoteDevice device) { deviceAdded(device); }
 
-  @Override public void remoteDeviceDiscoveryFailed(Registry registry, final RemoteDevice device, final Exception ex) {
-    a.runOnUiThread(new Runnable() {
-     {} public void run() {
-        Toast.makeText(a, "Discovery failed of '" + device.getDisplayString() + "': " + (ex != null ? ex.toString() : "Couldn't retrieve device/service descriptors"), Toast.LENGTH_LONG).show();
-      }
-    });
-    deviceRemoved(device);
-  }
-    /* End of optimization, you can remove the whole block if your Android handset is fast (>= 600 Mhz) */
+  @Override public void remoteDeviceDiscoveryFailed(Registry registry, final RemoteDevice device, final Exception ex) { deviceRemoved(device); }
+  /* End of optimization, you can remove the whole block if your Android handset is fast (>= 600 Mhz) */
 
   @Override public void remoteDeviceAdded(Registry registry, RemoteDevice device) { deviceAdded(device); }
 
@@ -67,42 +62,44 @@ public class BrowseRegistryListener implements RegistryListener {
   public void deviceAdded(final Device device) {
     a.runOnUiThread(new Runnable() {
       {} public void run() {
-        DeviceDisplay d = new DeviceDisplay(device);
-        int position = devices.indexOf(d);
-        if (position >= 0) {
-          devices.remove(d);
-          devices.add(position, d);
-          //Log.i("asdf", "updated device: " + device.getDetails().getFriendlyName());
-        } else {
-          devices.add(d);
-          //Log.i("asdf", "added device: " + device.getDetails().getFriendlyName());
-        }
         Service[] services = device.getServices();
-        for (Service service : services) {
+        for (final Service service : services) {
           if ("ContentDirectory".equalsIgnoreCase(service.getServiceId().getId()) && service.hasActions()) {
-            //Log.i("asdf", "ContentDirectory service found: " + device.getDetails().getFriendlyName());
             try {
-              Browse b = new Browse(service, "2$15$0", BrowseFlag.DIRECT_CHILDREN) {
+              Browse b = new Browse(service, "0", BrowseFlag.DIRECT_CHILDREN) {
                 @Override public void received(ActionInvocation actionInvocation, DIDLContent didl) {
                   for (Container container : didl.getContainers()) {
-                    Log.i("asdf", "container Title: " + container.getTitle() + ":" + container.getId());
+                    String title = container.getTitle();
+                    if (title != null && title.contains("Video")) {
+                      DeviceDisplay d = new DeviceDisplay(
+                        device,
+                        container.getId(),
+                        device.getDetails() != null && device.getDetails().getFriendlyName() != null
+                          ? device.getDetails().getFriendlyName()
+                          : device.getDisplayString());
+                      int position = devices.indexOf(d);
+                      if (position >= 0) {
+                        devices.remove(d);
+                        devices.add(position, d);
+                      } else {
+                        devices.add(d);
+                      }
+                      position = da.getPosition(d);
+                      if (position >= 0) {
+                        da.remove(d);
+                        da.add(d);
+                      } else {
+                        da.add(d);
+                      }
+                    }
                   }
-                  for (Item item : didl.getItems()) {
-                    Log.i("asdf", "item Title: " + item.getTitle() + ":" + item.getId());
-                  }
                 }
-                @Override public void updateStatus(Status status) {
-                  //Log.i("asdf", "updateStatus: " + status.name());
-                }
-                @Override public void failure(ActionInvocation invocation, UpnpResponse operation, String defaultMsg) {
-                  //Log.i("asdf", "failure: " + defaultMsg);
-                }
+                @Override public void updateStatus(Status status) { }
+                @Override public void failure(ActionInvocation invocation, UpnpResponse operation, String defaultMsg) { }
               };
               b.setControlPoint(upnpService.getControlPoint());
               b.run();
             } catch (Exception ex) {
-              // TODO: Figure out what the following error means
-              // callback must be executed through controlpoint
               Log.e("asdf", ex.getMessage());
             }
           }
