@@ -34,9 +34,7 @@ public class CurriculumAdapter extends ArrayAdapter<CurriculumDataModel> {
 
 
 
-    @Override public int getCount() {
-      return arrayListCurriculum.size();
-    }
+    @Override public int getCount() { return arrayListCurriculum.size(); }
 
     @Override public View getView(int position, View contentView, ViewGroup viewGroup) {
       View view;

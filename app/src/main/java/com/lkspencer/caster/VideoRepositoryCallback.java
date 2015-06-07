@@ -75,7 +75,7 @@ public class VideoRepositoryCallback implements IVideoRepositoryCallback {
         ClassDataModel c = (ClassDataModel) parent.getAdapter().getItem(position);
         m.classId = c.ClassId;
         m.main_position = 1;
-        m.onSectionAttached(m.main_position);
+        //m.onSectionAttached(m.main_position);
         /*
         FragmentManager fragmentManager = getSupportFragmentManager();
         fragmentManager
@@ -110,7 +110,7 @@ public class VideoRepositoryCallback implements IVideoRepositoryCallback {
         TopicDataModel t = (TopicDataModel) parent.getAdapter().getItem(position);
         m.topicId = t.TopicId;
         m.main_position = 2;
-        m.onSectionAttached(m.main_position);
+        //m.onSectionAttached(m.main_position);
         /*
         FragmentManager fragmentManager = getSupportFragmentManager();
         fragmentManager

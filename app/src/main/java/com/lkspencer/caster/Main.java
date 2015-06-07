@@ -1,23 +1,16 @@
 package com.lkspencer.caster;
 
-import android.app.AlertDialog;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.v4.app.FragmentManager;
-import android.support.v4.view.MenuItemCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.app.MediaRouteActionProvider;
-import android.support.v7.media.MediaRouteSelector;
-import android.support.v7.media.MediaRouter;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -30,9 +23,8 @@ import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.SpinnerAdapter;
-import android.widget.Toast;
 
-import com.google.android.gms.cast.CastMediaControlIntent;
+import com.lkspencer.caster.adapters.DIDLAdapter;
 import com.lkspencer.caster.adapters.DeviceAdapter;
 import com.lkspencer.caster.upnp.BrowseRegistryListener;
 import com.lkspencer.caster.upnp.DeviceDisplay;
@@ -47,6 +39,7 @@ import org.fourthline.cling.model.meta.Service;
 import org.fourthline.cling.support.contentdirectory.callback.Browse;
 import org.fourthline.cling.support.model.BrowseFlag;
 import org.fourthline.cling.support.model.DIDLContent;
+import org.fourthline.cling.support.model.DIDLObject;
 import org.fourthline.cling.support.model.container.Container;
 import org.fourthline.cling.support.model.item.Item;
 
@@ -56,8 +49,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.Locale;
+import java.util.Stack;
 
 
 public class Main extends AppCompatActivity implements NavigationDrawerFragment.INavigationDrawerCallbacks {
@@ -77,8 +70,11 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
   private int year;
   private int month;
   private VideoRepositoryCallback vrc;
-  private ArrayList<DeviceDisplay> devices = new ArrayList<>();
   private DeviceAdapter deviceAdapter;
+  private DIDLAdapter didlAdapter;
+  private String currentId = "0";
+  private Stack<String> ids = new Stack<>();
+  private Service service;
 
   private BrowseRegistryListener registryListener;
   private AndroidUpnpService upnpService;
@@ -87,15 +83,10 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
       upnpService = (AndroidUpnpService) service;
 
       // Clear the list
-      devices.clear();
-      deviceAdapter = new DeviceAdapter(
-          Main.this,
-          android.R.layout.simple_list_item_1,
-          android.R.id.text1,
-          devices);
+      deviceAdapter.clear();
 
       // Get ready for future device advertisements
-      registryListener = new BrowseRegistryListener(upnpService, Main.this, devices, deviceAdapter);
+      registryListener = new BrowseRegistryListener(Main.this, deviceAdapter);
       upnpService.getRegistry().addListener(registryListener);
 
       // Now add all devices to the list we already know about
@@ -103,60 +94,15 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
         registryListener.deviceAdded(device);
       }
 
-
-      ListView classes = (ListView)findViewById(R.id.classes);
-      classes.setAdapter(deviceAdapter);
-      classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-        {} @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-          DeviceDisplay dd = (DeviceDisplay) parent.getAdapter().getItem(position);
-          deviceAdapter.clear();
-          final Device device = dd.getDevice();
-          Service[] services = device.getServices();
-          for (final Service service : services) {
-            if ("ContentDirectory".equalsIgnoreCase(service.getServiceId().getId()) && service.hasActions()) {
-              try {
-                Browse b = new Browse(service, dd.getId(), BrowseFlag.DIRECT_CHILDREN) {
-                  @Override public void received(ActionInvocation actionInvocation, DIDLContent didl) {
-                    for (Container container : didl.getContainers()) {
-                      String title = container.getTitle();
-                      if (title != null) {
-                        DeviceDisplay d = new DeviceDisplay(device, container.getId(), title);
-                        deviceAdapter.add(d);
-                      }
-                    }
-                    for (Item item : didl.getItems()) {
-                      String title = item.getTitle();
-                      if (title != null) {
-                        DeviceDisplay d = new DeviceDisplay(device, "2", "FILE: " + title);
-                        deviceAdapter.add(d);
-                      }
-                    }
-                  }
-                  @Override public void updateStatus(Status status) { }
-                  @Override public void failure(ActionInvocation invocation, UpnpResponse operation, String defaultMsg) { }
-                };
-                b.setControlPoint(upnpService.getControlPoint());
-                b.run();
-              } catch (Exception ex) {
-                Log.e("asdf", ex.getMessage());
-              }
-            }
-          }
-          Toast.makeText(Main.this, dd.getDevice().getDetails().getFriendlyName() + ": " + dd.getId(), Toast.LENGTH_SHORT).show();
-        }
-      });
-
-
       // Search asynchronously for all devices, they will respond soon
       upnpService.getControlPoint().search();
     }
 
-    public void onServiceDisconnected(ComponentName className) {
-      upnpService = null;
-    }
+    public void onServiceDisconnected(ComponentName className) { upnpService = null; }
   };
 
   @Override protected void onCreate(Bundle savedInstanceState) {
+    initializeListView();
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
@@ -169,6 +115,7 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
     );
     //*/
 
+    /*
     mediaPlayer = new MediaPlayer(this);
     WifiManager wifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
     if (!wifi.isWifiEnabled()){
@@ -184,12 +131,10 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
       AlertDialog dialog = builder.create();
       dialog.show();
     }
+    //*/
     //TODO: verify that they are connected to the STVS or STVS-N wifi network
 
-    // Set up the drawer.
-    mNavigationDrawerFragment = (NavigationDrawerFragment) getSupportFragmentManager().findFragmentById(R.id.navigation_drawer);
-    mNavigationDrawerFragment.setUp(R.id.navigation_drawer, (DrawerLayout) findViewById(R.id.drawer_layout));
-
+    /*
     mTitle = getTitle();
 
     mediaPlayer.mediaRouter = MediaRouter.getInstance(getApplicationContext());
@@ -200,10 +145,14 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
     GregorianCalendar now = new GregorianCalendar();
     month = now.get(Calendar.MONTH) + 1;
     year = now.get(Calendar.YEAR);
-    vrc = new VideoRepositoryCallback(this, null);
+    //*/
+    //vrc = new VideoRepositoryCallback(this, null);
+
+    initializeMenu();
   }
 
   @Override public void onNavigationDrawerItemSelected(int position) {
+    /*
     this.classId = 0;
     this.topicId = 0;
     main_position = 0;
@@ -218,6 +167,89 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
     } else {
       onSectionAttached(main_position);
     }
+    */
+    /*
+    if (deviceAdapter == null) return;
+    DeviceDisplay dd = deviceAdapter.getItem(position);
+    service = dd.getService();
+    try {
+      Browse b = new Browse(service, "0", BrowseFlag.DIRECT_CHILDREN) {
+        @Override public void received(ActionInvocation actionInvocation, DIDLContent didl) {
+          for (Container container : didl.getContainers()) {
+            didlAdapter.add(container);
+          }
+          for (Item item : didl.getItems()) {
+            didlAdapter.add(item);
+          }
+        }
+        @Override public void updateStatus(Status status) { }
+        @Override public void failure(ActionInvocation invocation, UpnpResponse operation, String defaultMsg) { }
+      };
+      b.setControlPoint(upnpService.getControlPoint());
+      b.run();
+    } catch (Exception ex) {
+      Log.e("asdf", ex.getMessage());
+    }
+    */
+    //*
+    ListView classes = (ListView)findViewById(R.id.classes);
+    if (classes == null) {
+      FragmentManager fragmentManager = getSupportFragmentManager();
+      fragmentManager
+          .beginTransaction()
+          .replace(R.id.container, PlaceholderFragment.newInstance(main_position, this))
+          .commit();
+    } else {
+      classes.setAdapter(didlAdapter);
+      classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        {} @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+          didlAdapter.clear();
+          DIDLObject didl = (DIDLObject) parent.getAdapter().getItem(position);
+          if (position == 0 && ids.size() > 0) {
+            currentId = ids.pop();
+          } else {
+            ids.push(currentId);
+            currentId = didl.getId();
+          }
+          //deviceAdapter.clear();
+          Browse b = new Browse(service, currentId, BrowseFlag.DIRECT_CHILDREN) {
+            @Override public void received(ActionInvocation actionInvocation, DIDLContent didl) {
+              for (Container container : didl.getContainers()) {
+                didlAdapter.add(container);
+              }
+              for (Item item : didl.getItems()) {
+                didlAdapter.add(item);
+              }
+            }
+
+            @Override public void updateStatus(Status status) { }
+
+            @Override public void failure(ActionInvocation invocation, UpnpResponse operation, String defaultMsg) { }
+          };
+          b.setControlPoint(upnpService.getControlPoint());
+          b.run();
+        }
+      });
+      Browse b = new Browse(service, currentId, BrowseFlag.DIRECT_CHILDREN) {
+        @Override public void received(ActionInvocation actionInvocation, DIDLContent didl) {
+          for (Container container : didl.getContainers()) {
+            didlAdapter.add(container);
+          }
+          for (Item item : didl.getItems()) {
+            didlAdapter.add(item);
+          }
+        }
+
+        @Override public void updateStatus(Status status) { }
+
+        @Override public void failure(ActionInvocation invocation, UpnpResponse operation, String defaultMsg) { }
+      };
+      b.setControlPoint(upnpService.getControlPoint());
+      b.run();
+
+    }
+    //*/
+
   }
 
   @Override public boolean onCreateOptionsMenu(Menu menu) {
@@ -226,9 +258,9 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
       // if the drawer is not showing. Otherwise, let the drawer
       // decide what to show in the action bar.
       getMenuInflater().inflate(R.menu.main, menu);
-      MenuItem mediaRouteMenuItem = menu.findItem(R.id.media_route_menu_item);
-      MediaRouteActionProvider mediaRouteActionProvider = (MediaRouteActionProvider) MenuItemCompat.getActionProvider(mediaRouteMenuItem);
-      mediaRouteActionProvider.setRouteSelector(mediaPlayer.mediaRouteSelector);
+      //MenuItem mediaRouteMenuItem = menu.findItem(R.id.media_route_menu_item);
+      //MediaRouteActionProvider mediaRouteActionProvider = (MediaRouteActionProvider) MenuItemCompat.getActionProvider(mediaRouteMenuItem);
+      //mediaRouteActionProvider.setRouteSelector(mediaPlayer.mediaRouteSelector);
       restoreActionBar();
       return true;
     }
@@ -244,12 +276,12 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
 
   @Override protected void onStart() {
     super.onStart();
-    mediaPlayer.start();
+    //mediaPlayer.start();
   }
 
   @Override protected void onStop() {
     //setSelectedDevice(null);
-    mediaPlayer.stop();
+    //mediaPlayer.stop();
     super.onStop();
   }
 
@@ -282,6 +314,7 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
   }
 
 
+  /*
   public void onSectionAttached(int position) {
     VideoRepository vr = new VideoRepository(vrc, year, month);
     Integer[] params;
@@ -351,8 +384,10 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
     calendar.setTime(date);
     return calendar.get(Calendar.MONTH) + 1;
   }
+  */
 
   public void onFragmentInflated(View v) {
+    /*
     final Spinner year_filter = (Spinner)v.findViewById(R.id.year_filter);
     SetSpinnerSelectedValue(year_filter, String.valueOf(year));
     year_filter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -367,6 +402,8 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
 
       @Override public void onNothingSelected(AdapterView<?> parent) { }
     });
+    */
+    /*
     final Spinner month_filter = (Spinner)v.findViewById(R.id.month_filter);
     SetSpinnerSelectedValue(month_filter, getMonth(month - 1));
     month_filter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -381,6 +418,7 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
 
       @Override public void onNothingSelected(AdapterView<?> parent) { }
     });
+    */
     pause = (ImageButton)v.findViewById(R.id.pause);
     pause.setOnClickListener(new View.OnClickListener() {
       {} @Override public void onClick(View v) {
@@ -403,17 +441,13 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
     seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
       private int progress;
 
-      @Override
-      public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+      @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
         this.progress = progress;
       }
 
-      @Override
-      public void onStartTrackingTouch(SeekBar seekBar) {
-      }
+      @Override public void onStartTrackingTouch(SeekBar seekBar) { }
 
-      @Override
-      public void onStopTrackingTouch(SeekBar seekBar) {
+      @Override public void onStopTrackingTouch(SeekBar seekBar) {
         mediaPlayer.seekPlayback(progress);
       }
     });
@@ -435,6 +469,17 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
     if (pause != null) {
       pause.setImageResource(android.R.drawable.ic_media_play);
     }
+  }
+
+  public void initializeListView() {
+    didlAdapter = new DIDLAdapter(this, android.R.layout.simple_list_item_1, android.R.id.text1, new ArrayList<DIDLObject>());
+  }
+
+  public void initializeMenu() {
+    deviceAdapter = new DeviceAdapter(this, android.R.layout.simple_list_item_1, android.R.id.text1, new ArrayList<DeviceDisplay>());
+    // Set up the drawer.
+    mNavigationDrawerFragment = (NavigationDrawerFragment) getSupportFragmentManager().findFragmentById(R.id.navigation_drawer);
+    mNavigationDrawerFragment.setUp(R.id.navigation_drawer, (DrawerLayout) findViewById(R.id.drawer_layout), deviceAdapter);
   }
 
 }
