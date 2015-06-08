@@ -202,8 +202,7 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
     } else {
       classes.setAdapter(didlAdapter);
       classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-        {} @Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-          didlAdapter.clear();
+        {} @Override public void onItemClick(AdapterView<?> parent, View view, final int position, long id) {
           DIDLObject didl = (DIDLObject) parent.getAdapter().getItem(position);
           if (position == 0 && ids.size() > 0) {
             currentId = ids.pop();
@@ -211,9 +210,16 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
             ids.push(currentId);
             currentId = didl.getId();
           }
+          didlAdapter.clear();
           //deviceAdapter.clear();
           Browse b = new Browse(service, currentId, BrowseFlag.DIRECT_CHILDREN) {
             @Override public void received(ActionInvocation actionInvocation, DIDLContent didl) {
+              if (ids.size() > 0) {
+                Item i = new Item();
+                i.setId("0");
+                i.setTitle("Back...");
+                didlAdapter.add(i);
+              }
               for (Container container : didl.getContainers()) {
                 didlAdapter.add(container);
               }
@@ -230,23 +236,23 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
           b.run();
         }
       });
-      Browse b = new Browse(service, currentId, BrowseFlag.DIRECT_CHILDREN) {
+      DeviceDisplay dd = deviceAdapter.getItem(position);
+      service = dd.getService();
+      Browse b = new Browse(service, "0", BrowseFlag.DIRECT_CHILDREN) {
         @Override public void received(ActionInvocation actionInvocation, DIDLContent didl) {
+          didlAdapter.clear();
           for (Container container : didl.getContainers()) {
-            didlAdapter.add(container);
-          }
-          for (Item item : didl.getItems()) {
-            didlAdapter.add(item);
+            String title = container.getTitle();
+            if (title != null) {
+              didlAdapter.add(container);
+            }
           }
         }
-
         @Override public void updateStatus(Status status) { }
-
         @Override public void failure(ActionInvocation invocation, UpnpResponse operation, String defaultMsg) { }
       };
       b.setControlPoint(upnpService.getControlPoint());
       b.run();
-
     }
     //*/
 

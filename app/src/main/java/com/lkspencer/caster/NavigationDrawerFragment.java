@@ -256,25 +256,6 @@ public class NavigationDrawerFragment extends Fragment {
     if (mDrawerListView != null) {
       ListAdapter listAdapter = mDrawerListView.getAdapter();
       if (listAdapter != null) {
-        DeviceDisplay dd = (DeviceDisplay)listAdapter.getItem(position);
-        Device device = dd.getDevice();
-        Service[] services = device.getServices();
-        /*
-        Browse b = new Browse(service, "0", BrowseFlag.DIRECT_CHILDREN) {
-          @Override public void received(ActionInvocation actionInvocation, DIDLContent didl) {
-            for (Container container : didl.getContainers()) {
-              String title = container.getTitle();
-              if (title != null) {
-                //da.add(new DeviceDisplay(device, container.getId(), getDeviceName(device) + " - " + title));
-              }
-            }
-          }
-          @Override public void updateStatus(Status status) { }
-          @Override public void failure(ActionInvocation invocation, UpnpResponse operation, String defaultMsg) { }
-        };
-        b.setControlPoint(upnpService.getControlPoint());
-        b.run();
-        */
       }
     }
     if (mDrawerListView != null) {
