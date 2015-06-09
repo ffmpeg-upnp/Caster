@@ -1,16 +1,23 @@
 package com.lkspencer.caster;
 
+import android.app.AlertDialog;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.v4.app.FragmentManager;
+import android.support.v4.view.MenuItemCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.app.MediaRouteActionProvider;
+import android.support.v7.media.MediaRouteSelector;
+import android.support.v7.media.MediaRouter;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -24,8 +31,14 @@ import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.SpinnerAdapter;
 
+import com.google.android.gms.cast.CastMediaControlIntent;
+import com.google.android.gms.cast.MediaInfo;
+import com.google.android.gms.cast.MediaMetadata;
+import com.google.android.gms.cast.RemoteMediaPlayer;
+import com.google.android.gms.common.api.ResultCallback;
 import com.lkspencer.caster.adapters.DIDLAdapter;
 import com.lkspencer.caster.adapters.DeviceAdapter;
+import com.lkspencer.caster.datamodels.VideoDataModel;
 import com.lkspencer.caster.upnp.BrowseRegistryListener;
 import com.lkspencer.caster.upnp.DeviceDisplay;
 
@@ -40,6 +53,7 @@ import org.fourthline.cling.support.contentdirectory.callback.Browse;
 import org.fourthline.cling.support.model.BrowseFlag;
 import org.fourthline.cling.support.model.DIDLContent;
 import org.fourthline.cling.support.model.DIDLObject;
+import org.fourthline.cling.support.model.Res;
 import org.fourthline.cling.support.model.container.Container;
 import org.fourthline.cling.support.model.item.Item;
 
@@ -49,8 +63,11 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.List;
 import java.util.Locale;
 import java.util.Stack;
+import java.util.Timer;
 
 
 public class Main extends AppCompatActivity implements NavigationDrawerFragment.INavigationDrawerCallbacks {
@@ -115,7 +132,7 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
     );
     //*/
 
-    /*
+    //*
     mediaPlayer = new MediaPlayer(this);
     WifiManager wifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
     if (!wifi.isWifiEnabled()){
@@ -134,7 +151,7 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
     //*/
     //TODO: verify that they are connected to the STVS or STVS-N wifi network
 
-    /*
+    //*
     mTitle = getTitle();
 
     mediaPlayer.mediaRouter = MediaRouter.getInstance(getApplicationContext());
@@ -142,9 +159,9 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
             .Builder()
             .addControlCategory(CastMediaControlIntent.categoryForCast(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID))
             .build();
-    GregorianCalendar now = new GregorianCalendar();
-    month = now.get(Calendar.MONTH) + 1;
-    year = now.get(Calendar.YEAR);
+    //GregorianCalendar now = new GregorianCalendar();
+    //month = now.get(Calendar.MONTH) + 1;
+    //year = now.get(Calendar.YEAR);
     //*/
     //vrc = new VideoRepositoryCallback(this, null);
 
@@ -204,6 +221,55 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
       classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
         {} @Override public void onItemClick(AdapterView<?> parent, View view, final int position, long id) {
           DIDLObject didl = (DIDLObject) parent.getAdapter().getItem(position);
+          if (position > 0 && didl instanceof Item) {
+            Item video = (Item)didl;
+            List<Res> resources = video.getResources();
+            for (Res r : resources) {
+              Log.i("Main", r.getValue());
+              String url = r.getValue();
+              String title = video.getTitle();
+              String contentType = "video/mpeg";
+              MediaMetadata mMediaMetadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MOVIE);
+              mMediaMetadata.putString(MediaMetadata.KEY_TITLE, title);
+              final MediaInfo data = new MediaInfo.Builder(url)
+                  .setContentType(contentType)
+                  .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
+                  .setMetadata(mMediaMetadata)
+                  .build();
+              if (mediaPlayer.apiClient != null && mediaPlayer.mRemoteMediaPlayer != null) {
+                try {
+                  mediaPlayer.mRemoteMediaPlayer.load(mediaPlayer.apiClient, data, true).setResultCallback(new ResultCallback<RemoteMediaPlayer.MediaChannelResult>() {
+                    {
+                    }
+
+                    @Override
+                    public void onResult(RemoteMediaPlayer.MediaChannelResult result) {
+                      if (result.getStatus().isSuccess()) {
+                        if (seekBar != null) {
+                          seekBar.setMax((int) mediaPlayer.mRemoteMediaPlayer.getMediaInfo().getStreamDuration());
+                        }
+                        pause.setImageResource(android.R.drawable.ic_media_pause);
+                        playback.setVisibility(View.VISIBLE);
+                        //playing = true;
+                        mediaPlayer.paused = false;
+                        Log.d(Main.TAG, "Media loaded successfully");
+
+                        mediaPlayer.progress = new Timer("progress");
+                        mediaPlayer.setupTimerTask(seekBar);
+                        mediaPlayer.progress.schedule(mediaPlayer.progressUpdater, 0, 500);
+                      }
+                    }
+                  });
+                } catch (IllegalStateException e) {
+                  Log.e(Main.TAG, "Problem occurred with media during loading", e);
+                } catch (Exception e) {
+                  Log.e(Main.TAG, "Problem opening media during loading", e);
+                }
+              }
+
+            }
+            return;
+          }
           if (position == 0 && ids.size() > 0) {
             currentId = ids.pop();
           } else {
@@ -264,9 +330,9 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
       // if the drawer is not showing. Otherwise, let the drawer
       // decide what to show in the action bar.
       getMenuInflater().inflate(R.menu.main, menu);
-      //MenuItem mediaRouteMenuItem = menu.findItem(R.id.media_route_menu_item);
-      //MediaRouteActionProvider mediaRouteActionProvider = (MediaRouteActionProvider) MenuItemCompat.getActionProvider(mediaRouteMenuItem);
-      //mediaRouteActionProvider.setRouteSelector(mediaPlayer.mediaRouteSelector);
+      MenuItem mediaRouteMenuItem = menu.findItem(R.id.media_route_menu_item);
+      MediaRouteActionProvider mediaRouteActionProvider = (MediaRouteActionProvider) MenuItemCompat.getActionProvider(mediaRouteMenuItem);
+      mediaRouteActionProvider.setRouteSelector(mediaPlayer.mediaRouteSelector);
       restoreActionBar();
       return true;
     }
@@ -282,12 +348,12 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
 
   @Override protected void onStart() {
     super.onStart();
-    //mediaPlayer.start();
+    mediaPlayer.start();
   }
 
   @Override protected void onStop() {
     //setSelectedDevice(null);
-    //mediaPlayer.stop();
+    mediaPlayer.stop();
     super.onStop();
   }
 

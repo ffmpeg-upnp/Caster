@@ -140,8 +140,8 @@
     <orderEntry type="library" exported="" name="play-services-gcm-7.5.0" level="project" />
     <orderEntry type="library" exported="" name="play-services-appinvite-7.5.0" level="project" />
     <orderEntry type="library" exported="" name="jetty-client-8.1.12.v20130726" level="project" />
-    <orderEntry type="library" exported="" name="jetty-util-8.1.12.v20130726" level="project" />
     <orderEntry type="library" exported="" name="jetty-servlet-8.1.12.v20130726" level="project" />
+    <orderEntry type="library" exported="" name="jetty-util-8.1.12.v20130726" level="project" />
     <orderEntry type="library" exported="" name="javax.servlet-3.0.0.v201112011016" level="project" />
     <orderEntry type="library" exported="" name="jboss_common_jdbc_wrapper_src" level="project" />
     <orderEntry type="library" exported="" name="support-v4-22.2.0" level="project" />
@@ -157,8 +157,8 @@
     <orderEntry type="library" exported="" name="play-services-games-7.5.0" level="project" />
     <orderEntry type="library" exported="" name="play-services-identity-7.5.0" level="project" />
     <orderEntry type="library" exported="" name="slf4j-jdk14-1.7.12" level="project" />
-    <orderEntry type="library" exported="" name="jetty-continuation-8.1.12.v20130726" level="project" />
     <orderEntry type="library" exported="" name="slf4j-api-1.7.12" level="project" />
+    <orderEntry type="library" exported="" name="jetty-continuation-8.1.12.v20130726" level="project" />
     <orderEntry type="library" exported="" name="play-services-maps-7.5.0" level="project" />
   </component>
 </module>

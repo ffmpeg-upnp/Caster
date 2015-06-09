@@ -53,12 +53,14 @@ public class VideoRepositoryCallback implements IVideoRepositoryCallback {
   }
 
   public void ProcessClasses(VideoRepository repository) {
+    /*
     LinearLayout filters = (LinearLayout)m.findViewById(R.id.filters);
     if (filters == null) {
       Toast.makeText(m, "An error occurred processing the filters.", Toast.LENGTH_LONG).show();
       return;
     }
     filters.setVisibility(View.VISIBLE);
+    */
     ListView classes = (ListView)m.findViewById(R.id.classes);
     if (classes == null) {
       Toast.makeText(m, "An error occurred processing the classes.", Toast.LENGTH_LONG).show();
@@ -88,12 +90,14 @@ public class VideoRepositoryCallback implements IVideoRepositoryCallback {
   }
 
   public void ProcessTopics(VideoRepository repository) {
+    /*
     LinearLayout filters = (LinearLayout)m.findViewById(R.id.filters);
     if (filters == null) {
       Toast.makeText(m, "An error occurred processing the filters.", Toast.LENGTH_LONG).show();
       return;
     }
     filters.setVisibility(View.VISIBLE);
+    */
     ListView classes = (ListView)m.findViewById(R.id.classes);
     if (classes == null) {
       Toast.makeText(m, "An error occurred processing the classes.", Toast.LENGTH_LONG).show();
@@ -123,12 +127,14 @@ public class VideoRepositoryCallback implements IVideoRepositoryCallback {
   }
 
   public void ProcessVideos(VideoRepository repository) {
+    /*
     LinearLayout filters = (LinearLayout)m.findViewById(R.id.filters);
     if (filters == null) {
       Toast.makeText(m, "An error occurred processing the filters.", Toast.LENGTH_LONG).show();
       return;
     }
     filters.setVisibility(View.GONE);
+    */
     ListView classes = (ListView)m.findViewById(R.id.classes);
     if (classes == null) {
       Toast.makeText(m, "An error occurred processing the classes.", Toast.LENGTH_LONG).show();
