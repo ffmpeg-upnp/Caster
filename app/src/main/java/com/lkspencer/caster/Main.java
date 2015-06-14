@@ -6,8 +6,11 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.media.AudioManager;
+import android.net.Uri;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.v4.app.FragmentManager;
@@ -30,6 +33,7 @@ import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.SpinnerAdapter;
+import android.widget.Toast;
 
 import com.google.android.gms.cast.CastMediaControlIntent;
 import com.google.android.gms.cast.MediaInfo;
@@ -224,8 +228,8 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
           if (position > 0 && didl instanceof Item) {
             Item video = (Item)didl;
             List<Res> resources = video.getResources();
+            boolean started = false;
             for (Res r : resources) {
-              Log.i("Main", r.getValue());
               String url = r.getValue();
               String title = video.getTitle();
               String contentType = "video/mpeg";
@@ -236,14 +240,11 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
                   .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
                   .setMetadata(mMediaMetadata)
                   .build();
-              if (mediaPlayer.apiClient != null && mediaPlayer.mRemoteMediaPlayer != null) {
+              if (!started && mediaPlayer.apiClient != null && mediaPlayer.mRemoteMediaPlayer != null) {
                 try {
+                  started = true;
                   mediaPlayer.mRemoteMediaPlayer.load(mediaPlayer.apiClient, data, true).setResultCallback(new ResultCallback<RemoteMediaPlayer.MediaChannelResult>() {
-                    {
-                    }
-
-                    @Override
-                    public void onResult(RemoteMediaPlayer.MediaChannelResult result) {
+                    {} @Override public void onResult(RemoteMediaPlayer.MediaChannelResult result) {
                       if (result.getStatus().isSuccess()) {
                         if (seekBar != null) {
                           seekBar.setMax((int) mediaPlayer.mRemoteMediaPlayer.getMediaInfo().getStreamDuration());
@@ -260,10 +261,19 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
                       }
                     }
                   });
+
                 } catch (IllegalStateException e) {
                   Log.e(Main.TAG, "Problem occurred with media during loading", e);
                 } catch (Exception e) {
                   Log.e(Main.TAG, "Problem opening media during loading", e);
+                }
+              } else {
+                // not connected to chromecast. attempt to play file on android device.
+                if (!started) {
+                  started = true;
+                  Intent intent = new Intent(android.content.Intent.ACTION_VIEW);
+                  intent.setDataAndType(Uri.parse(url), "video/mpeg");
+                  startActivity(intent);
                 }
               }
 
