@@ -6,11 +6,9 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.media.AudioManager;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.v4.app.FragmentManager;
@@ -31,9 +29,6 @@ import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.SeekBar;
-import android.widget.Spinner;
-import android.widget.SpinnerAdapter;
-import android.widget.Toast;
 
 import com.google.android.gms.cast.CastMediaControlIntent;
 import com.google.android.gms.cast.MediaInfo;
@@ -42,7 +37,6 @@ import com.google.android.gms.cast.RemoteMediaPlayer;
 import com.google.android.gms.common.api.ResultCallback;
 import com.lkspencer.caster.adapters.DIDLAdapter;
 import com.lkspencer.caster.adapters.DeviceAdapter;
-import com.lkspencer.caster.datamodels.VideoDataModel;
 import com.lkspencer.caster.upnp.BrowseRegistryListener;
 import com.lkspencer.caster.upnp.DeviceDisplay;
 
@@ -61,23 +55,14 @@ import org.fourthline.cling.support.model.Res;
 import org.fourthline.cling.support.model.container.Container;
 import org.fourthline.cling.support.model.item.Item;
 
-import java.text.DateFormatSymbols;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.List;
-import java.util.Locale;
 import java.util.Stack;
 import java.util.Timer;
 
 
 public class Main extends AppCompatActivity implements NavigationDrawerFragment.INavigationDrawerCallbacks {
   public static final String TAG = "Main";
-  public int classId;
-  public int topicId;
   public int main_position = 0;
   public ImageButton pause;
   public LinearLayout playback;
@@ -88,9 +73,6 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
 
   private NavigationDrawerFragment mNavigationDrawerFragment;
   private CharSequence mTitle;
-  private int year;
-  private int month;
-  private VideoRepositoryCallback vrc;
   private DeviceAdapter deviceAdapter;
   private DIDLAdapter didlAdapter;
   private String currentId = "0";
@@ -127,16 +109,14 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
-    //* setup the UPnP service to find available media devices
+    // setup the UPnP service to find available media devices
     org.seamless.util.logging.LoggingUtil.resetRootHandler(new FixedAndroidLogHandler());
     getApplicationContext().bindService(
         new Intent(this, AndroidUpnpServiceImpl.class),
         serviceConnection,
         Context.BIND_AUTO_CREATE
     );
-    //*/
 
-    //*
     mediaPlayer = new MediaPlayer(this);
     WifiManager wifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
     if (!wifi.isWifiEnabled()){
@@ -152,67 +132,17 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
       AlertDialog dialog = builder.create();
       dialog.show();
     }
-    //*/
-    //TODO: verify that they are connected to the STVS or STVS-N wifi network
 
-    //*
     mTitle = getTitle();
-
     mediaPlayer.mediaRouter = MediaRouter.getInstance(getApplicationContext());
     mediaPlayer.mediaRouteSelector = new MediaRouteSelector
             .Builder()
             .addControlCategory(CastMediaControlIntent.categoryForCast(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID))
             .build();
-    //GregorianCalendar now = new GregorianCalendar();
-    //month = now.get(Calendar.MONTH) + 1;
-    //year = now.get(Calendar.YEAR);
-    //*/
-    //vrc = new VideoRepositoryCallback(this, null);
-
     initializeMenu();
   }
 
   @Override public void onNavigationDrawerItemSelected(int position) {
-    /*
-    this.classId = 0;
-    this.topicId = 0;
-    main_position = 0;
-    // update the main content by replacing fragments
-    ListView classes = (ListView) findViewById(R.id.classes);
-    if (classes == null) {
-      FragmentManager fragmentManager = getSupportFragmentManager();
-      fragmentManager
-              .beginTransaction()
-              .replace(R.id.container, PlaceholderFragment.newInstance(main_position, this))
-              .commit();
-    } else {
-      onSectionAttached(main_position);
-    }
-    */
-    /*
-    if (deviceAdapter == null) return;
-    DeviceDisplay dd = deviceAdapter.getItem(position);
-    service = dd.getService();
-    try {
-      Browse b = new Browse(service, "0", BrowseFlag.DIRECT_CHILDREN) {
-        @Override public void received(ActionInvocation actionInvocation, DIDLContent didl) {
-          for (Container container : didl.getContainers()) {
-            didlAdapter.add(container);
-          }
-          for (Item item : didl.getItems()) {
-            didlAdapter.add(item);
-          }
-        }
-        @Override public void updateStatus(Status status) { }
-        @Override public void failure(ActionInvocation invocation, UpnpResponse operation, String defaultMsg) { }
-      };
-      b.setControlPoint(upnpService.getControlPoint());
-      b.run();
-    } catch (Exception ex) {
-      Log.e("asdf", ex.getMessage());
-    }
-    */
-    //*
     ListView classes = (ListView)findViewById(R.id.classes);
     if (classes == null) {
       FragmentManager fragmentManager = getSupportFragmentManager();
@@ -330,8 +260,6 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
       b.setControlPoint(upnpService.getControlPoint());
       b.run();
     }
-    //*/
-
   }
 
   @Override public boolean onCreateOptionsMenu(Menu menu) {
@@ -396,111 +324,8 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
   }
 
 
-  /*
-  public void onSectionAttached(int position) {
-    VideoRepository vr = new VideoRepository(vrc, year, month);
-    Integer[] params;
-    switch (position) {
-      case 0:
-        params = new Integer[4];
-        params[0] = VideoRepository.Actions.GET_CLASSES;
-        if (mNavigationDrawerFragment != null) {
-          params[1] = mNavigationDrawerFragment.getCurrentCurriculumId();
-        }
-        vr.execute(params);
-        mTitle = "Classes";
-        break;
-      case 1:
-        params = new Integer[4];
-        params[0] = VideoRepository.Actions.GET_TOPICS;
-        if (mNavigationDrawerFragment != null) {
-          params[1] = mNavigationDrawerFragment.getCurrentCurriculumId();
-        }
-        params[2] = classId;
-        vr.execute(params);
-        mTitle = "Topics";
-        break;
-      case 2:
-        params = new Integer[4];
-        params[0] = VideoRepository.Actions.GET_VIDEOS;
-        if (mNavigationDrawerFragment != null) {
-          params[1] = mNavigationDrawerFragment.getCurrentCurriculumId();
-        }
-        params[2] = classId;
-        params[3] = topicId;
-        vr.execute(params);
-        mTitle = "Videos";
-        break;
-    }
-    ActionBar actionBar = getSupportActionBar();
-    if (actionBar != null) {
-      actionBar.setTitle(mTitle);
-    }
-  }
-
-  private void SetSpinnerSelectedValue(Spinner spinner, String value) {
-    if (value == null || "".equalsIgnoreCase(value)) return;
-
-    SpinnerAdapter adapter = spinner.getAdapter();
-    int count = adapter.getCount();
-    for (int i = 0; i < count; i++) {
-      if (value.equalsIgnoreCase((String)adapter.getItem(i))) {
-        spinner.setSelection(i);
-        break;
-      }
-    }
-  }
-
-  public String getMonth(int month) {
-    return new DateFormatSymbols().getMonths()[month];
-  }
-
-  public int getMonthInt(String value) {
-    Date date = null;
-    try {
-      date = new SimpleDateFormat("MMMM", Locale.ENGLISH).parse(value);
-    } catch (ParseException e) {
-      e.printStackTrace();
-    }
-    Calendar calendar = Calendar.getInstance();
-    calendar.setTime(date);
-    return calendar.get(Calendar.MONTH) + 1;
-  }
-  */
 
   public void onFragmentInflated(View v) {
-    /*
-    final Spinner year_filter = (Spinner)v.findViewById(R.id.year_filter);
-    SetSpinnerSelectedValue(year_filter, String.valueOf(year));
-    year_filter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-      @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-        year = Integer.parseInt((String) year_filter.getSelectedItem());
-        if (yearSelected) {
-          onSectionAttached(main_position);
-        } else {
-          yearSelected = true;
-        }
-      }
-
-      @Override public void onNothingSelected(AdapterView<?> parent) { }
-    });
-    */
-    /*
-    final Spinner month_filter = (Spinner)v.findViewById(R.id.month_filter);
-    SetSpinnerSelectedValue(month_filter, getMonth(month - 1));
-    month_filter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-      @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-        month = getMonthInt((String)parent.getItemAtPosition(position));
-        if (monthSelected) {
-          onSectionAttached(main_position);
-        } else {
-          monthSelected = true;
-        }
-      }
-
-      @Override public void onNothingSelected(AdapterView<?> parent) { }
-    });
-    */
     pause = (ImageButton)v.findViewById(R.id.pause);
     pause.setOnClickListener(new View.OnClickListener() {
       {} @Override public void onClick(View v) {

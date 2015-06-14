@@ -17,16 +17,12 @@ public class DeviceAdapter extends ArrayAdapter<DeviceDisplay> {
     super(context, layout, textView, arrayListDevice);
     this.arrayListDevice = arrayListDevice;
     this.layout = layout;
-    //this.textView = textView;
-    //this.context = context;
   }
 
 
 
   private ArrayList<DeviceDisplay> arrayListDevice;
   private int layout;
-  //private int textView;
-  //private Context context;
 
 
 
