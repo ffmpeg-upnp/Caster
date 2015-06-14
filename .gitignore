@@ -1,8 +1,6 @@
 .gradle
-/local.properties
-/.idea/workspace.xml
-.DS_Store
-/build
-
-app/src/main/java/com/lkspencer/caster/Connection.java
-app/app-release.apk
+.idea
+build
+gradle
+local.properties
+*.iml

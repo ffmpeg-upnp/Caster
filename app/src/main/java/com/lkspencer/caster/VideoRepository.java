@@ -52,7 +52,7 @@ public class VideoRepository extends AsyncTask<Integer[], Void, Void> {
     try {
       curriculumsDataModels = new ArrayList<CurriculumDataModel>();
       Class.forName("com.mysql.jdbc.Driver");
-      connection = DriverManager.getConnection(com.lkspencer.caster.Connection.STRING);
+      connection = GetConnection();
       statement = connection.prepareStatement(
               "select\n" +
               "  c.*\n" +
@@ -82,7 +82,7 @@ public class VideoRepository extends AsyncTask<Integer[], Void, Void> {
     try {
       Class.forName("com.mysql.jdbc.Driver");
       classDataModels = new ArrayList<ClassDataModel>();
-      connection = DriverManager.getConnection(com.lkspencer.caster.Connection.STRING);
+      connection = GetConnection();
       statement = connection.prepareStatement(
               "select\n" +
               "  c.*\n" +
@@ -117,7 +117,7 @@ public class VideoRepository extends AsyncTask<Integer[], Void, Void> {
     try {
       topicDataModels = new ArrayList<TopicDataModel>();
       Class.forName("com.mysql.jdbc.Driver");
-      connection = DriverManager.getConnection(com.lkspencer.caster.Connection.STRING);
+      connection = GetConnection();
       statement = null;
       if (curriculumId == 1) {
         statement = connection.prepareStatement(
@@ -165,7 +165,7 @@ public class VideoRepository extends AsyncTask<Integer[], Void, Void> {
     try {
       videoDataModels = new ArrayList<VideoDataModel>();
       Class.forName("com.mysql.jdbc.Driver");
-      connection = DriverManager.getConnection(com.lkspencer.caster.Connection.STRING);
+      connection = GetConnection();
       statement = null;
       if (curriculumId == 1) {
         statement = connection.prepareStatement(
@@ -232,6 +232,14 @@ public class VideoRepository extends AsyncTask<Integer[], Void, Void> {
       }
     } catch (SQLException e) {
       e.printStackTrace();
+    }
+  }
+
+  public Connection GetConnection() throws SQLException {
+    try {
+      return DriverManager.getConnection(com.lkspencer.caster.Connection.PRIMARY);
+    } catch (SQLException e) {
+      return DriverManager.getConnection(com.lkspencer.caster.Connection.BACKUP);
     }
   }
 

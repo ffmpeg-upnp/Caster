@@ -1,19 +1,24 @@
 package com.lkspencer.caster;
 
 import android.app.AlertDialog;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBar;
-import android.support.v7.app.ActionBarActivity;
+import android.support.v7.app.AppCompatActivity;
 import android.support.v7.app.MediaRouteActionProvider;
 import android.support.v7.media.MediaRouteSelector;
 import android.support.v7.media.MediaRouter;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -27,18 +32,45 @@ import android.widget.Spinner;
 import android.widget.SpinnerAdapter;
 
 import com.google.android.gms.cast.CastMediaControlIntent;
+import com.google.android.gms.cast.MediaInfo;
+import com.google.android.gms.cast.MediaMetadata;
+import com.google.android.gms.cast.RemoteMediaPlayer;
+import com.google.android.gms.common.api.ResultCallback;
+import com.lkspencer.caster.adapters.DIDLAdapter;
+import com.lkspencer.caster.adapters.DeviceAdapter;
+import com.lkspencer.caster.datamodels.VideoDataModel;
+import com.lkspencer.caster.upnp.BrowseRegistryListener;
+import com.lkspencer.caster.upnp.DeviceDisplay;
+
+import org.fourthline.cling.android.AndroidUpnpService;
+import org.fourthline.cling.android.AndroidUpnpServiceImpl;
+import org.fourthline.cling.android.FixedAndroidLogHandler;
+import org.fourthline.cling.model.action.ActionInvocation;
+import org.fourthline.cling.model.message.UpnpResponse;
+import org.fourthline.cling.model.meta.Device;
+import org.fourthline.cling.model.meta.Service;
+import org.fourthline.cling.support.contentdirectory.callback.Browse;
+import org.fourthline.cling.support.model.BrowseFlag;
+import org.fourthline.cling.support.model.DIDLContent;
+import org.fourthline.cling.support.model.DIDLObject;
+import org.fourthline.cling.support.model.Res;
+import org.fourthline.cling.support.model.container.Container;
+import org.fourthline.cling.support.model.item.Item;
 
 import java.text.DateFormatSymbols;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.List;
 import java.util.Locale;
+import java.util.Stack;
+import java.util.Timer;
 
 
-public class Main extends ActionBarActivity implements NavigationDrawerFragment.INavigationDrawerCallbacks {
-
+public class Main extends AppCompatActivity implements NavigationDrawerFragment.INavigationDrawerCallbacks {
   public static final String TAG = "Main";
   public int classId;
   public int topicId;
@@ -49,20 +81,58 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
   public MediaPlayer mediaPlayer;
   public boolean monthSelected = false;
   public boolean yearSelected = false;
-  public boolean INEEDTOBEDELETED;
 
   private NavigationDrawerFragment mNavigationDrawerFragment;
   private CharSequence mTitle;
   private int year;
   private int month;
   private VideoRepositoryCallback vrc;
+  private DeviceAdapter deviceAdapter;
+  private DIDLAdapter didlAdapter;
+  private String currentId = "0";
+  private Stack<String> ids = new Stack<>();
+  private Service service;
 
+  private BrowseRegistryListener registryListener;
+  private AndroidUpnpService upnpService;
+  private ServiceConnection serviceConnection = new ServiceConnection() {
+    public void onServiceConnected(ComponentName className, IBinder service) {
+      upnpService = (AndroidUpnpService) service;
 
+      // Clear the list
+      deviceAdapter.clear();
+
+      // Get ready for future device advertisements
+      registryListener = new BrowseRegistryListener(Main.this, deviceAdapter);
+      upnpService.getRegistry().addListener(registryListener);
+
+      // Now add all devices to the list we already know about
+      for (Device device : upnpService.getRegistry().getDevices()) {
+        registryListener.deviceAdded(device);
+      }
+
+      // Search asynchronously for all devices, they will respond soon
+      upnpService.getControlPoint().search();
+    }
+
+    public void onServiceDisconnected(ComponentName className) { upnpService = null; }
+  };
 
   @Override protected void onCreate(Bundle savedInstanceState) {
+    initializeListView();
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
+    //* setup the UPnP service to find available media devices
+    org.seamless.util.logging.LoggingUtil.resetRootHandler(new FixedAndroidLogHandler());
+    getApplicationContext().bindService(
+        new Intent(this, AndroidUpnpServiceImpl.class),
+        serviceConnection,
+        Context.BIND_AUTO_CREATE
+    );
+    //*/
+
+    //*
     mediaPlayer = new MediaPlayer(this);
     WifiManager wifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
     if (!wifi.isWifiEnabled()){
@@ -78,12 +148,10 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
       AlertDialog dialog = builder.create();
       dialog.show();
     }
+    //*/
     //TODO: verify that they are connected to the STVS or STVS-N wifi network
 
-    // Set up the drawer.
-    mNavigationDrawerFragment = (NavigationDrawerFragment) getSupportFragmentManager().findFragmentById(R.id.navigation_drawer);
-    mNavigationDrawerFragment.setUp(R.id.navigation_drawer, (DrawerLayout) findViewById(R.id.drawer_layout));
-
+    //*
     mTitle = getTitle();
 
     mediaPlayer.mediaRouter = MediaRouter.getInstance(getApplicationContext());
@@ -91,13 +159,17 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
             .Builder()
             .addControlCategory(CastMediaControlIntent.categoryForCast(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID))
             .build();
-    GregorianCalendar now = new GregorianCalendar();
-    month = now.get(Calendar.MONTH) + 1;
-    year = now.get(Calendar.YEAR);
-    vrc = new VideoRepositoryCallback(this, null);
+    //GregorianCalendar now = new GregorianCalendar();
+    //month = now.get(Calendar.MONTH) + 1;
+    //year = now.get(Calendar.YEAR);
+    //*/
+    //vrc = new VideoRepositoryCallback(this, null);
+
+    initializeMenu();
   }
 
   @Override public void onNavigationDrawerItemSelected(int position) {
+    /*
     this.classId = 0;
     this.topicId = 0;
     main_position = 0;
@@ -112,6 +184,144 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     } else {
       onSectionAttached(main_position);
     }
+    */
+    /*
+    if (deviceAdapter == null) return;
+    DeviceDisplay dd = deviceAdapter.getItem(position);
+    service = dd.getService();
+    try {
+      Browse b = new Browse(service, "0", BrowseFlag.DIRECT_CHILDREN) {
+        @Override public void received(ActionInvocation actionInvocation, DIDLContent didl) {
+          for (Container container : didl.getContainers()) {
+            didlAdapter.add(container);
+          }
+          for (Item item : didl.getItems()) {
+            didlAdapter.add(item);
+          }
+        }
+        @Override public void updateStatus(Status status) { }
+        @Override public void failure(ActionInvocation invocation, UpnpResponse operation, String defaultMsg) { }
+      };
+      b.setControlPoint(upnpService.getControlPoint());
+      b.run();
+    } catch (Exception ex) {
+      Log.e("asdf", ex.getMessage());
+    }
+    */
+    //*
+    ListView classes = (ListView)findViewById(R.id.classes);
+    if (classes == null) {
+      FragmentManager fragmentManager = getSupportFragmentManager();
+      fragmentManager
+          .beginTransaction()
+          .replace(R.id.container, PlaceholderFragment.newInstance(main_position, this))
+          .commit();
+    } else {
+      classes.setAdapter(didlAdapter);
+      classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        {} @Override public void onItemClick(AdapterView<?> parent, View view, final int position, long id) {
+          DIDLObject didl = (DIDLObject) parent.getAdapter().getItem(position);
+          if (position > 0 && didl instanceof Item) {
+            Item video = (Item)didl;
+            List<Res> resources = video.getResources();
+            for (Res r : resources) {
+              Log.i("Main", r.getValue());
+              String url = r.getValue();
+              String title = video.getTitle();
+              String contentType = "video/mpeg";
+              MediaMetadata mMediaMetadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MOVIE);
+              mMediaMetadata.putString(MediaMetadata.KEY_TITLE, title);
+              final MediaInfo data = new MediaInfo.Builder(url)
+                  .setContentType(contentType)
+                  .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
+                  .setMetadata(mMediaMetadata)
+                  .build();
+              if (mediaPlayer.apiClient != null && mediaPlayer.mRemoteMediaPlayer != null) {
+                try {
+                  mediaPlayer.mRemoteMediaPlayer.load(mediaPlayer.apiClient, data, true).setResultCallback(new ResultCallback<RemoteMediaPlayer.MediaChannelResult>() {
+                    {
+                    }
+
+                    @Override
+                    public void onResult(RemoteMediaPlayer.MediaChannelResult result) {
+                      if (result.getStatus().isSuccess()) {
+                        if (seekBar != null) {
+                          seekBar.setMax((int) mediaPlayer.mRemoteMediaPlayer.getMediaInfo().getStreamDuration());
+                        }
+                        pause.setImageResource(android.R.drawable.ic_media_pause);
+                        playback.setVisibility(View.VISIBLE);
+                        //playing = true;
+                        mediaPlayer.paused = false;
+                        Log.d(Main.TAG, "Media loaded successfully");
+
+                        mediaPlayer.progress = new Timer("progress");
+                        mediaPlayer.setupTimerTask(seekBar);
+                        mediaPlayer.progress.schedule(mediaPlayer.progressUpdater, 0, 500);
+                      }
+                    }
+                  });
+                } catch (IllegalStateException e) {
+                  Log.e(Main.TAG, "Problem occurred with media during loading", e);
+                } catch (Exception e) {
+                  Log.e(Main.TAG, "Problem opening media during loading", e);
+                }
+              }
+
+            }
+            return;
+          }
+          if (position == 0 && ids.size() > 0) {
+            currentId = ids.pop();
+          } else {
+            ids.push(currentId);
+            currentId = didl.getId();
+          }
+          didlAdapter.clear();
+          //deviceAdapter.clear();
+          Browse b = new Browse(service, currentId, BrowseFlag.DIRECT_CHILDREN) {
+            @Override public void received(ActionInvocation actionInvocation, DIDLContent didl) {
+              if (ids.size() > 0) {
+                Item i = new Item();
+                i.setId("0");
+                i.setTitle("Back...");
+                didlAdapter.add(i);
+              }
+              for (Container container : didl.getContainers()) {
+                didlAdapter.add(container);
+              }
+              for (Item item : didl.getItems()) {
+                didlAdapter.add(item);
+              }
+            }
+
+            @Override public void updateStatus(Status status) { }
+
+            @Override public void failure(ActionInvocation invocation, UpnpResponse operation, String defaultMsg) { }
+          };
+          b.setControlPoint(upnpService.getControlPoint());
+          b.run();
+        }
+      });
+      DeviceDisplay dd = deviceAdapter.getItem(position);
+      service = dd.getService();
+      Browse b = new Browse(service, "0", BrowseFlag.DIRECT_CHILDREN) {
+        @Override public void received(ActionInvocation actionInvocation, DIDLContent didl) {
+          didlAdapter.clear();
+          for (Container container : didl.getContainers()) {
+            String title = container.getTitle();
+            if (title != null) {
+              didlAdapter.add(container);
+            }
+          }
+        }
+        @Override public void updateStatus(Status status) { }
+        @Override public void failure(ActionInvocation invocation, UpnpResponse operation, String defaultMsg) { }
+      };
+      b.setControlPoint(upnpService.getControlPoint());
+      b.run();
+    }
+    //*/
+
   }
 
   @Override public boolean onCreateOptionsMenu(Menu menu) {
@@ -166,8 +376,17 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     }
   }
 
+  @Override protected void onDestroy() {
+    super.onDestroy();
+    if (upnpService != null) {
+      upnpService.getRegistry().removeListener(registryListener);
+    }
+    // This will stop the UPnP service if nobody else is bound to it
+    getApplicationContext().unbindService(serviceConnection);
+  }
 
 
+  /*
   public void onSectionAttached(int position) {
     VideoRepository vr = new VideoRepository(vrc, year, month);
     Integer[] params;
@@ -237,8 +456,10 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     calendar.setTime(date);
     return calendar.get(Calendar.MONTH) + 1;
   }
+  */
 
   public void onFragmentInflated(View v) {
+    /*
     final Spinner year_filter = (Spinner)v.findViewById(R.id.year_filter);
     SetSpinnerSelectedValue(year_filter, String.valueOf(year));
     year_filter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -253,6 +474,8 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
 
       @Override public void onNothingSelected(AdapterView<?> parent) { }
     });
+    */
+    /*
     final Spinner month_filter = (Spinner)v.findViewById(R.id.month_filter);
     SetSpinnerSelectedValue(month_filter, getMonth(month - 1));
     month_filter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -267,6 +490,7 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
 
       @Override public void onNothingSelected(AdapterView<?> parent) { }
     });
+    */
     pause = (ImageButton)v.findViewById(R.id.pause);
     pause.setOnClickListener(new View.OnClickListener() {
       {} @Override public void onClick(View v) {
@@ -303,9 +527,11 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
 
   public void restoreActionBar() {
     ActionBar actionBar = getSupportActionBar();
-    actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_STANDARD);
-    actionBar.setDisplayShowTitleEnabled(true);
-    actionBar.setTitle(mTitle);
+    if (actionBar != null) {
+      //actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_STANDARD);
+      actionBar.setDisplayShowTitleEnabled(true);
+      actionBar.setTitle(mTitle);
+    }
   }
 
   public void hidePlayback() {
@@ -315,6 +541,17 @@ public class Main extends ActionBarActivity implements NavigationDrawerFragment.
     if (pause != null) {
       pause.setImageResource(android.R.drawable.ic_media_play);
     }
+  }
+
+  public void initializeListView() {
+    didlAdapter = new DIDLAdapter(this, android.R.layout.simple_list_item_1, android.R.id.text1, new ArrayList<DIDLObject>());
+  }
+
+  public void initializeMenu() {
+    deviceAdapter = new DeviceAdapter(this, android.R.layout.simple_list_item_1, android.R.id.text1, new ArrayList<DeviceDisplay>());
+    // Set up the drawer.
+    mNavigationDrawerFragment = (NavigationDrawerFragment) getSupportFragmentManager().findFragmentById(R.id.navigation_drawer);
+    mNavigationDrawerFragment.setUp(R.id.navigation_drawer, (DrawerLayout) findViewById(R.id.drawer_layout), deviceAdapter);
   }
 
 }

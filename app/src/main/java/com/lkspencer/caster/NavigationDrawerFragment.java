@@ -5,12 +5,12 @@ import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.support.v4.app.ActionBarDrawerToggle;
 import android.support.v4.app.Fragment;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBar;
-import android.support.v7.app.ActionBarActivity;
+import android.support.v7.app.ActionBarDrawerToggle;
+import android.support.v7.app.AppCompatActivity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -18,10 +18,22 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
+import android.widget.ListAdapter;
 import android.widget.ListView;
 
-import com.lkspencer.caster.datamodels.CurriculumDataModel;
+import com.lkspencer.caster.adapters.DeviceAdapter;
+import com.lkspencer.caster.upnp.DeviceDisplay;
 
+import org.fourthline.cling.model.action.ActionInvocation;
+import org.fourthline.cling.model.message.UpnpResponse;
+import org.fourthline.cling.model.meta.Device;
+import org.fourthline.cling.model.meta.Service;
+import org.fourthline.cling.support.contentdirectory.callback.Browse;
+import org.fourthline.cling.support.model.BrowseFlag;
+import org.fourthline.cling.support.model.DIDLContent;
+import org.fourthline.cling.support.model.container.Container;
+
+import java.util.ArrayList;
 import java.util.GregorianCalendar;
 
 /**
@@ -61,7 +73,6 @@ public class NavigationDrawerFragment extends Fragment {
   private View mFragmentContainerView;
   private boolean mFromSavedInstanceState;
   private boolean mUserLearnedDrawer;
-  private int mCurriculumId;
 
 
 
@@ -96,12 +107,14 @@ public class NavigationDrawerFragment extends Fragment {
         selectItem(position);
       }
     });
+    /*
     GregorianCalendar now = new GregorianCalendar();
     VideoRepositoryCallback vrc = new VideoRepositoryCallback(null, this);
     VideoRepository vr = new VideoRepository(vrc, now.get(GregorianCalendar.YEAR), now.get(GregorianCalendar.MONTH));
     Integer[] params = new Integer[3];
     params[0] = VideoRepository.Actions.GET_CURRICULUMS;
     vr.execute(params);
+    */
     return mDrawerListView;
   }
 
@@ -148,9 +161,6 @@ public class NavigationDrawerFragment extends Fragment {
 
 
   //Methods
-  /**
-   *
-   */
   public boolean isDrawerOpen() {
     return mDrawerLayout != null && mDrawerLayout.isDrawerOpen(mFragmentContainerView);
   }
@@ -161,7 +171,7 @@ public class NavigationDrawerFragment extends Fragment {
    * @param fragmentId   The android:id of this fragment in its activity's layout.
    * @param drawerLayout The DrawerLayout containing this fragment's UI.
    */
-  public void setUp(int fragmentId, DrawerLayout drawerLayout) {
+  public void setUp(int fragmentId, DrawerLayout drawerLayout, DeviceAdapter deviceAdapter) {
     mFragmentContainerView = getActivity().findViewById(fragmentId);
     mDrawerLayout = drawerLayout;
 
@@ -178,31 +188,25 @@ public class NavigationDrawerFragment extends Fragment {
     mDrawerToggle = new ActionBarDrawerToggle(
             getActivity(),                    /* host Activity */
             mDrawerLayout,                    /* DrawerLayout object */
-            R.drawable.ic_drawer,             /* nav drawer image to replace 'Up' caret */
             R.string.navigation_drawer_open,  /* "open drawer" description for accessibility */
             R.string.navigation_drawer_close  /* "close drawer" description for accessibility */
     ) {
       @Override public void onDrawerClosed(View drawerView) {
         super.onDrawerClosed(drawerView);
-        if (!isAdded()) {
-          return;
-        }
+        if (!isAdded()) return;
 
         getActivity().supportInvalidateOptionsMenu(); // calls onPrepareOptionsMenu()
       }
 
       @Override public void onDrawerOpened(View drawerView) {
         super.onDrawerOpened(drawerView);
-        if (!isAdded()) {
-          return;
-        }
+        if (!isAdded()) return;
 
         if (!mUserLearnedDrawer) {
           // The user manually opened the drawer; store this flag to prevent auto-showing
           // the navigation drawer automatically in the future.
           mUserLearnedDrawer = true;
-          SharedPreferences sp = PreferenceManager
-                  .getDefaultSharedPreferences(getActivity());
+          SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(getActivity());
           sp.edit().putBoolean(PREF_USER_LEARNED_DRAWER, true).apply();
         }
 
@@ -224,13 +228,11 @@ public class NavigationDrawerFragment extends Fragment {
     });
 
     mDrawerLayout.setDrawerListener(mDrawerToggle);
+    mDrawerListView.setAdapter(deviceAdapter);
   }
 
-  /**
-   *
-   */
   public ActionBar getActionBar() {
-    ActionBarActivity aba = (ActionBarActivity) getActivity();
+    AppCompatActivity aba = (AppCompatActivity) getActivity();
     if (aba != null) {
       return aba.getSupportActionBar();
     }
@@ -240,19 +242,9 @@ public class NavigationDrawerFragment extends Fragment {
   /**
    * Callbacks interface that all activities using this fragment must implement.
    */
-  public static interface INavigationDrawerCallbacks {
-    /**
-     * Called when an item in the navigation drawer is selected.
-     */
+  public interface INavigationDrawerCallbacks {
+    // Called when an item in the navigation drawer is selected.
     void onNavigationDrawerItemSelected(int position);
-  }
-
-  /**
-   * Gets the currently selected curriculum id which was selected from the slide out navigation drawer.
-   * @return returns an integer that represents the selected curriculum id.
-   */
-  public int getCurrentCurriculumId() {
-    return this.mCurriculumId;
   }
 
   /**
@@ -261,9 +253,10 @@ public class NavigationDrawerFragment extends Fragment {
    */
   private void selectItem(int position) {
     mCurrentSelectedPosition = position;
-    if (mDrawerListView != null && mDrawerListView.getAdapter() != null) {
-      CurriculumDataModel c = (CurriculumDataModel) mDrawerListView.getAdapter().getItem(position);
-      this.mCurriculumId = c.CurriculumId;
+    if (mDrawerListView != null) {
+      ListAdapter listAdapter = mDrawerListView.getAdapter();
+      if (listAdapter != null) {
+      }
     }
     if (mDrawerListView != null) {
       mDrawerListView.setItemChecked(position, true);
@@ -282,9 +275,11 @@ public class NavigationDrawerFragment extends Fragment {
    */
   private void showGlobalContextActionBar() {
     ActionBar actionBar = getActionBar();
-    actionBar.setDisplayShowTitleEnabled(true);
-    actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_STANDARD);
-    actionBar.setTitle(R.string.app_name);
+    if (actionBar != null) {
+      actionBar.setDisplayShowTitleEnabled(true);
+      //actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_STANDARD);
+      actionBar.setTitle(R.string.app_name);
+    }
   }
 
 }

@@ -4,35 +4,15 @@
         android:orientation="vertical"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent">
-  <LinearLayout
-    android:id="@+id/filters"
-    android:orientation="horizontal"
-    android:layout_width="fill_parent"
-    android:layout_height="wrap_content">
-    <Spinner
-      android:id="@+id/month_filter"
-      android:entries="@array/months_array"
-      android:padding="12dp"
-      android:layout_weight="0.5"
-      android:layout_width="fill_parent"
-      android:layout_height="wrap_content" />
-    <Spinner
-      android:id="@+id/year_filter"
-      android:entries="@array/years_array"
-      android:padding="12dp"
-      android:layout_weight="0.5"
-      android:layout_width="fill_parent"
-      android:layout_height="wrap_content" />
-  </LinearLayout>
   <ListView
     android:id="@+id/classes"
     android:layout_width="match_parent"
     android:layout_height="fill_parent"
     android:choiceMode="singleChoice"
-    android:divider="@drawable/abc_list_divider_holo_light"
+    android:divider="@drawable/abc_list_divider_mtrl_alpha"
     android:dividerHeight="1dp"
     android:background="#eee"
-    tools:listitem="@android:layout/simple_list_item_1"/>
+    tools:listitem="@android:layout/simple_list_item_1" />
   <LinearLayout
           android:id="@+id/playback"
           android:visibility="gone"
