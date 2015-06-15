@@ -123,8 +123,8 @@
     <orderEntry type="library" exported="" name="support-annotations-22.2.0" level="project" />
     <orderEntry type="library" exported="" name="play-services-analytics-7.5.0" level="project" />
     <orderEntry type="library" exported="" name="play-services-panorama-7.5.0" level="project" />
-    <orderEntry type="library" exported="" name="seamless-http-1.1.0" level="project" />
     <orderEntry type="library" exported="" name="jetty-server-8.1.12.v20130726" level="project" />
+    <orderEntry type="library" exported="" name="seamless-http-1.1.0" level="project" />
     <orderEntry type="library" exported="" name="jboss_common_jdbc_wrapper" level="project" />
     <orderEntry type="library" exported="" name="appcompat-v7-22.2.0" level="project" />
     <orderEntry type="library" exported="" name="play-services-appindexing-7.5.0" level="project" />

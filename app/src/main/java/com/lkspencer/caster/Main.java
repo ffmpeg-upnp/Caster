@@ -29,6 +29,7 @@ import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.SeekBar;
+import android.widget.TextView;
 
 import com.google.android.gms.cast.CastMediaControlIntent;
 import com.google.android.gms.cast.MediaInfo;
@@ -309,6 +310,17 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
           mediaPlayer.decreaseVolume();
         }
         return true;
+      case KeyEvent.KEYCODE_BACK:
+        if (action == KeyEvent.ACTION_DOWN) {
+          ListView classes = (ListView)findViewById(R.id.classes);
+          if (classes.getChildCount() > 0) {
+            TextView tv = (TextView)classes.getChildAt(0);
+            if ("Back...".equalsIgnoreCase(tv.getText().toString())) {
+              classes.performItemClick(tv, 0, didlAdapter.getItemId(0));
+              return true;
+            }
+          }
+        }
       default:
         return super.dispatchKeyEvent(event);
     }
