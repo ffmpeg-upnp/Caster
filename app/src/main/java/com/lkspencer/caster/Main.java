@@ -64,13 +64,11 @@ import java.util.Timer;
 
 public class Main extends AppCompatActivity implements NavigationDrawerFragment.INavigationDrawerCallbacks {
   public static final String TAG = "Main";
-  public int main_position = 0;
+  public int position = 0;
   public ImageButton pause;
   public LinearLayout playback;
   public SeekBar seekBar;
   public MediaPlayer mediaPlayer;
-  public boolean monthSelected = false;
-  public boolean yearSelected = false;
 
   private NavigationDrawerFragment mNavigationDrawerFragment;
   private CharSequence mTitle;
@@ -110,6 +108,12 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
+    FragmentManager fragmentManager = getSupportFragmentManager();
+    fragmentManager
+        .beginTransaction()
+        .replace(R.id.container, PlaceholderFragment.newInstance("fragment_main", this))
+        .commit();
+
     // setup the UPnP service to find available media devices
     org.seamless.util.logging.LoggingUtil.resetRootHandler(new FixedAndroidLogHandler());
     getApplicationContext().bindService(
@@ -144,20 +148,150 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
   }
 
   @Override public void onNavigationDrawerItemSelected(int position) {
-    ListView classes = (ListView)findViewById(R.id.classes);
-    if (classes == null) {
+    this.position = position;
+    ListView media_items = (ListView)findViewById(R.id.media_items);
+    if (media_items == null) {
       FragmentManager fragmentManager = getSupportFragmentManager();
       fragmentManager
           .beginTransaction()
-          .replace(R.id.container, PlaceholderFragment.newInstance(main_position, this))
+          .replace(R.id.container, PlaceholderFragment.newInstance("fragment_mediaitems", this))
           .commit();
-    } else {
-      classes.setAdapter(didlAdapter);
-      classes.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-        {} @Override public void onItemClick(AdapterView<?> parent, View view, final int position, long id) {
-          DIDLObject didl = (DIDLObject) parent.getAdapter().getItem(position);
-          if (position > 0 && didl instanceof Item) {
-            Item video = (Item)didl;
+    }
+  }
+
+  @Override public boolean onCreateOptionsMenu(Menu menu) {
+    if (!mNavigationDrawerFragment.isDrawerOpen()) {
+      // Only show items in the action bar relevant to this screen
+      // if the drawer is not showing. Otherwise, let the drawer
+      // decide what to show in the action bar.
+      getMenuInflater().inflate(R.menu.main, menu);
+      MenuItem mediaRouteMenuItem = menu.findItem(R.id.media_route_menu_item);
+      MediaRouteActionProvider mediaRouteActionProvider = (MediaRouteActionProvider) MenuItemCompat.getActionProvider(mediaRouteMenuItem);
+      mediaRouteActionProvider.setRouteSelector(mediaPlayer.mediaRouteSelector);
+      restoreActionBar();
+      return true;
+    }
+    return super.onCreateOptionsMenu(menu);
+  }
+
+  @Override public boolean onOptionsItemSelected(MenuItem item) {
+    // Handle action bar item clicks here. The action bar will
+    // automatically handle clicks on the Home/Up button, so long
+    // as you specify a parent activity in AndroidManifest.xml.
+    return super.onOptionsItemSelected(item);
+  }
+
+  @Override protected void onStart() {
+    super.onStart();
+    mediaPlayer.start();
+  }
+
+  @Override protected void onStop() {
+    //setSelectedDevice(null);
+    mediaPlayer.stop();
+    super.onStop();
+  }
+
+  @Override public boolean dispatchKeyEvent(@NonNull KeyEvent event) {
+    int action = event.getAction();
+    int keyCode = event.getKeyCode();
+    switch (keyCode) {
+      case KeyEvent.KEYCODE_VOLUME_UP:
+        if (action == KeyEvent.ACTION_DOWN) {
+          mediaPlayer.increaseVolume();
+        }
+        return true;
+      case KeyEvent.KEYCODE_VOLUME_DOWN:
+        if (action == KeyEvent.ACTION_DOWN) {
+          mediaPlayer.decreaseVolume();
+        }
+        return true;
+      case KeyEvent.KEYCODE_BACK:
+        if (action == KeyEvent.ACTION_DOWN) {
+          ListView classes = (ListView)findViewById(R.id.media_items);
+          if (classes != null && classes.getChildCount() > 0) {
+            TextView tv = (TextView)classes.getChildAt(0);
+            if ("Back...".equalsIgnoreCase(tv.getText().toString())) {
+              classes.performItemClick(tv, 0, didlAdapter.getItemId(0));
+              return true;
+            }
+          }
+        }
+      default:
+        return super.dispatchKeyEvent(event);
+    }
+  }
+
+  @Override protected void onDestroy() {
+    super.onDestroy();
+    if (upnpService != null) {
+      upnpService.getRegistry().removeListener(registryListener);
+    }
+    // This will stop the UPnP service if nobody else is bound to it
+    getApplicationContext().unbindService(serviceConnection);
+  }
+
+
+
+  public void onFragmentInflated(View v) {
+    pause = (ImageButton) v.findViewById(R.id.pause);
+    if (pause != null) {
+      pause.setOnClickListener(new View.OnClickListener() {
+        {
+        }
+
+        @Override
+        public void onClick(View v) {
+          if (mediaPlayer.paused) {
+            pause.setImageResource(android.R.drawable.ic_media_pause);
+          } else {
+            pause.setImageResource(android.R.drawable.ic_media_play);
+          }
+          mediaPlayer.pausePlayback(seekBar);
+        }
+      });
+    }
+    ImageButton stop = (ImageButton) v.findViewById(R.id.stop);
+    if (stop != null) {
+      stop.setOnClickListener(new View.OnClickListener() {
+        {
+        }
+
+        @Override
+        public void onClick(View v) {
+          mediaPlayer.stopPlayback(Main.this);
+        }
+      });
+    }
+    playback = (LinearLayout) v.findViewById(R.id.playback);
+    seekBar = (SeekBar) v.findViewById(R.id.seekBar);
+    if (seekBar != null) {
+      seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        private int progress;
+
+        @Override
+        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+          this.progress = progress;
+        }
+
+        @Override
+        public void onStartTrackingTouch(SeekBar seekBar) {
+        }
+
+        @Override
+        public void onStopTrackingTouch(SeekBar seekBar) {
+          mediaPlayer.seekPlayback(progress);
+        }
+      });
+    }
+    ListView media_items = (ListView) v.findViewById(R.id.media_items);
+    if (media_items != null) {
+      media_items.setAdapter(didlAdapter);
+      media_items.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        {} @Override public void onItemClick(AdapterView<?> parent, View view, final int itemClickedPosition, long id) {
+          DIDLObject didl = (DIDLObject) parent.getAdapter().getItem(itemClickedPosition);
+          if (itemClickedPosition > 0 && didl instanceof Item) {
+            Item video = (Item) didl;
             List<Res> resources = video.getResources();
             boolean started = false;
             for (Res r : resources) {
@@ -211,7 +345,7 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
             }
             return;
           }
-          if (position == 0 && ids.size() > 0) {
+          if (itemClickedPosition == 0 && ids.size() > 0) {
             currentId = ids.pop();
           } else {
             ids.push(currentId);
@@ -220,7 +354,8 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
           didlAdapter.clear();
           //deviceAdapter.clear();
           Browse b = new Browse(service, currentId, BrowseFlag.DIRECT_CHILDREN) {
-            @Override public void received(ActionInvocation actionInvocation, DIDLContent didl) {
+            @Override
+            public void received(ActionInvocation actionInvocation, DIDLContent didl) {
               if (ids.size() > 0) {
                 Item i = new Item();
                 i.setId("0");
@@ -235,15 +370,19 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
               }
             }
 
-            @Override public void updateStatus(Status status) { }
+            @Override
+            public void updateStatus(Status status) {
+            }
 
-            @Override public void failure(ActionInvocation invocation, UpnpResponse operation, String defaultMsg) { }
+            @Override
+            public void failure(ActionInvocation invocation, UpnpResponse operation, String defaultMsg) {
+            }
           };
           b.setControlPoint(upnpService.getControlPoint());
           b.run();
         }
       });
-      DeviceDisplay dd = deviceAdapter.getItem(position);
+      DeviceDisplay dd = deviceAdapter.getItem(this.position);
       service = dd.getService();
       Browse b = new Browse(service, "0", BrowseFlag.DIRECT_CHILDREN) {
         @Override public void received(ActionInvocation actionInvocation, DIDLContent didl) {
@@ -261,115 +400,6 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
       b.setControlPoint(upnpService.getControlPoint());
       b.run();
     }
-  }
-
-  @Override public boolean onCreateOptionsMenu(Menu menu) {
-    if (!mNavigationDrawerFragment.isDrawerOpen()) {
-      // Only show items in the action bar relevant to this screen
-      // if the drawer is not showing. Otherwise, let the drawer
-      // decide what to show in the action bar.
-      getMenuInflater().inflate(R.menu.main, menu);
-      MenuItem mediaRouteMenuItem = menu.findItem(R.id.media_route_menu_item);
-      MediaRouteActionProvider mediaRouteActionProvider = (MediaRouteActionProvider) MenuItemCompat.getActionProvider(mediaRouteMenuItem);
-      mediaRouteActionProvider.setRouteSelector(mediaPlayer.mediaRouteSelector);
-      restoreActionBar();
-      return true;
-    }
-    return super.onCreateOptionsMenu(menu);
-  }
-
-  @Override public boolean onOptionsItemSelected(MenuItem item) {
-    // Handle action bar item clicks here. The action bar will
-    // automatically handle clicks on the Home/Up button, so long
-    // as you specify a parent activity in AndroidManifest.xml.
-    return super.onOptionsItemSelected(item);
-  }
-
-  @Override protected void onStart() {
-    super.onStart();
-    mediaPlayer.start();
-  }
-
-  @Override protected void onStop() {
-    //setSelectedDevice(null);
-    mediaPlayer.stop();
-    super.onStop();
-  }
-
-  @Override public boolean dispatchKeyEvent(@NonNull KeyEvent event) {
-    int action = event.getAction();
-    int keyCode = event.getKeyCode();
-    switch (keyCode) {
-      case KeyEvent.KEYCODE_VOLUME_UP:
-        if (action == KeyEvent.ACTION_DOWN) {
-          mediaPlayer.increaseVolume();
-        }
-        return true;
-      case KeyEvent.KEYCODE_VOLUME_DOWN:
-        if (action == KeyEvent.ACTION_DOWN) {
-          mediaPlayer.decreaseVolume();
-        }
-        return true;
-      case KeyEvent.KEYCODE_BACK:
-        if (action == KeyEvent.ACTION_DOWN) {
-          ListView classes = (ListView)findViewById(R.id.classes);
-          if (classes.getChildCount() > 0) {
-            TextView tv = (TextView)classes.getChildAt(0);
-            if ("Back...".equalsIgnoreCase(tv.getText().toString())) {
-              classes.performItemClick(tv, 0, didlAdapter.getItemId(0));
-              return true;
-            }
-          }
-        }
-      default:
-        return super.dispatchKeyEvent(event);
-    }
-  }
-
-  @Override protected void onDestroy() {
-    super.onDestroy();
-    if (upnpService != null) {
-      upnpService.getRegistry().removeListener(registryListener);
-    }
-    // This will stop the UPnP service if nobody else is bound to it
-    getApplicationContext().unbindService(serviceConnection);
-  }
-
-
-
-  public void onFragmentInflated(View v) {
-    pause = (ImageButton)v.findViewById(R.id.pause);
-    pause.setOnClickListener(new View.OnClickListener() {
-      {} @Override public void onClick(View v) {
-        if (mediaPlayer.paused) {
-          pause.setImageResource(android.R.drawable.ic_media_pause);
-        } else {
-          pause.setImageResource(android.R.drawable.ic_media_play);
-        }
-        mediaPlayer.pausePlayback(seekBar);
-      }
-    });
-    ImageButton stop = (ImageButton)v.findViewById(R.id.stop);
-    stop.setOnClickListener(new View.OnClickListener() {
-      {} @Override public void onClick(View v) {
-        mediaPlayer.stopPlayback(Main.this);
-      }
-    });
-    playback = (LinearLayout)v.findViewById(R.id.playback);
-    seekBar = (SeekBar)v.findViewById(R.id.seekBar);
-    seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-      private int progress;
-
-      @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-        this.progress = progress;
-      }
-
-      @Override public void onStartTrackingTouch(SeekBar seekBar) { }
-
-      @Override public void onStopTrackingTouch(SeekBar seekBar) {
-        mediaPlayer.seekPlayback(progress);
-      }
-    });
   }
 
   public void restoreActionBar() {
