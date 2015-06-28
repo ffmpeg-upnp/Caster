@@ -32,5 +32,20 @@
   <string name="classes_stop">Stop button</string>
   <string name="no_wifi">You must turn on WiFi and connect to the STVS or the STVS-N wireless network for Caster to work properly.</string>
   <string name="ok">OK</string>
+  <string name="welcome_message">
+    Welcome to Caster. Swipe in from the side menu to connect up to the building\'s media server.
+    After connecting to the media server you will be able to browse through the folders of the media
+    server.
+  </string>
+  <string name="instructions_header">Playing files</string>
+  <string name="instructions">
+    Once you\'ve located the file you would like to play, you have two options to play it. You can
+    connect to one of the chromecast devices using the cast button in the top right corner of this
+    app, or you can play the file directly on your device. Once connected to a chromecast, selecting
+    a file will automatically play that file on the TV the chromecast is connected to. When playing
+    a file locally on your android device, we recommend installing the VLC media player as it is
+    capable of playing most files without any issues.
+  </string>
+  <string name="moroni">Moroni</string>
 
 </resources>
