@@ -33,9 +33,10 @@
   <string name="no_wifi">You must turn on WiFi and connect to the STVS or the STVS-N wireless network for Caster to work properly.</string>
   <string name="ok">OK</string>
   <string name="welcome_message">
-    Welcome to Caster. Swipe in from the side menu to connect up to the building\'s media server.
-    After connecting to the media server you will be able to browse through the folders of the media
-    server.
+    Welcome to Caster. Before using Caster, make sure your WiFi is turned on and make sure that you
+    are connected to the Church Building\'s STVS or STVS-N WiFi network. After you are connected,
+    swipe in from the side menu to connect up to the building\'s media server. After connecting to
+    the media server you will be able to browse through the folders of the media server.
   </string>
   <string name="instructions_header">Playing files</string>
   <string name="instructions">

@@ -7,6 +7,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.net.Uri;
+import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -124,6 +125,7 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
 
     mediaPlayer = new MediaPlayer(this);
     WifiManager wifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
+    WifiInfo wi = wifi.getConnectionInfo();
     if (!wifi.isWifiEnabled()){
       AlertDialog.Builder builder = new AlertDialog.Builder(this);
       builder.setMessage(R.string.no_wifi);
@@ -135,6 +137,13 @@ public class Main extends AppCompatActivity implements NavigationDrawerFragment.
         }
       });
       AlertDialog dialog = builder.create();
+      dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+        {} @Override public void onDismiss(DialogInterface dialog) {
+          dialog.dismiss();
+          mediaPlayer.teardown();
+          Main.this.finish();
+        }
+      });
       dialog.show();
     }
 
